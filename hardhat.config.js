@@ -49,7 +49,7 @@ module.exports = {
         blockNumber: 13211966,
       },
       initialBaseFeePerGas: 5,
-      loggingEnabled: true,
+      loggingEnabled: false,
       allowUnlimitedContractSize: false,
     },
     localhost: {
