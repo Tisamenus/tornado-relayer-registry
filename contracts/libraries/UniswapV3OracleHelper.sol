@@ -4,13 +4,17 @@ pragma solidity ^0.6.12;
 
 import { OracleLibrary } from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import { LowGasSafeMath } from "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 
 interface IERC20Decimals {
   function decimals() external returns (uint8);
 }
 
 library UniswapV3OracleHelper {
+  using LowGasSafeMath for uint256;
+
   IUniswapV3Factory public constant UniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
   function getPriceOfTokenInToken(
     address baseToken,
@@ -25,5 +29,21 @@ library UniswapV3OracleHelper {
         baseToken,
         quoteToken
       );
+  }
+
+  function getPriceOfTokenInWETH(
+    address token,
+    uint24 fee,
+    uint32 period
+  ) public returns (uint256) {
+    return getPriceOfTokenInToken(token, WETH, fee, period);
+  }
+
+  function getPriceRatioOfTokens(
+    address[] memory tokens,
+    uint24[] memory fees,
+    uint32 period
+  ) public returns (uint256) {
+    return getPriceOfTokenInWETH(tokens[0], fees[0], period).mul(1e18) / getPriceOfTokenInWETH(tokens[1], fees[1], period);
   }
 }
