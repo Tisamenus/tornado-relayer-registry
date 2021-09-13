@@ -20,9 +20,20 @@ describe('Data and Manager tests', () => {
   let RegistryDataFactory
   let RegistryData
 
+  //// IMPERSONATED ACCOUNTS
+  let impGov;
+
+  //// NORMAL ACCOUNTS
+  let signerArray
+
   //// HELPER FN
+  let sendr = async (method, params) => {
+    return await ethers.provider.send(method, params)
+  }
 
   before(async () => {
+    signerArray = await ethers.getSigners();
+
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
     OracleHelperLibrary = await OracleHelperFactory.deploy()
 
@@ -31,7 +42,9 @@ describe('Data and Manager tests', () => {
         UniswapV3OracleHelper: OracleHelperLibrary.address,
       },
     })
-    DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, { unsafeAllow: ['external-library-linking'] })
+    DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, {
+      unsafeAllow: ['external-library-linking'],
+    })
 
     await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
 
@@ -42,20 +55,46 @@ describe('Data and Manager tests', () => {
       governance,
       [0, 0, 0, 0, 3000, 3000, 3000, 3000],
       [
-        '0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc', '0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936',
-        '0x910cbd523d972eb0a6f4cae4618ad62622b39dbf', '0xa160cdab225685da1d56aa342ad8841c3b53f291',
-        '0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3', '0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144',
-        '0x07687e702b410fa43f4cb4af7fa097918ffd2730', '0x23773e65ed146a459791799d01336db287f25334',
+        '0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc',
+        '0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936',
+        '0x910cbd523d972eb0a6f4cae4618ad62622b39dbf',
+        '0xa160cdab225685da1d56aa342ad8841c3b53f291',
+        '0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3',
+        '0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144',
+        '0x07687e702b410fa43f4cb4af7fa097918ffd2730',
+        '0x23773e65ed146a459791799d01336db287f25334',
       ],
     )
-
   })
 
   describe('Start of tests', () => {
-    it("Should have properly initialized all data", async () => {
-	for(i = 0; i < 8; i++) {
-	  console.log(await RegistryData.getPoolDataForPoolId(i))	
-	}
-    });
+
+    describe('Setup procedure', () => {
+      it('Should have properly initialized all data', async () => {
+        for (i = 0; i < 8; i++) {
+          console.log(await RegistryData.getPoolDataForPoolId(i))
+        }
+      })
+
+      it('Should impersonate governance properly', async () => {
+        await sendr('hardhat_impersonateAccount', [governance])
+        impGov = await ethers.getSigner(governance)
+	await sendr('hardhat_setBalance', [governance, "0xDE0B6B3A7640000"])
+      });
+
+      it('Should set RegistryData global params', async () => {
+	regData = await RegistryData.connect(impGov);
+	await regData.setProtocolPeriod(ethers.utils.parseUnits("5400", "wei"));
+	await regData.setProtocolFee(ethers.utils.parseUnits("10", "finney"));
+      });
+
+      it('Should pass initial fee update', async () => {
+	await RegistryData.updateFees();
+        for (i = 0; i < 8; i++) {
+          console.log(await RegistryData.getFeeForPoolId(i))
+        }
+      });
+    })
+
   })
 })

@@ -35,7 +35,7 @@ contract RegistryDataManager {
     view
     returns (uint256[] memory newPoolIdToFee)
   {
-    newPoolIdToFee = new uint256[](newPoolIdToFee.length);
+    newPoolIdToFee = new uint256[](poolIdToPoolData.length);
     for (uint256 i = 0; i < poolIdToPoolData.length; i++) {
       newPoolIdToFee[i] = getBalanceOfPool(poolIdToPoolData[i].addressData, i)
         .mul(1e18)

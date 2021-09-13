@@ -2,7 +2,7 @@ require('dotenv').config()
 require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-etherscan')
 require('@nomiclabs/hardhat-waffle')
-require('@openzeppelin/hardhat-upgrades');
+require('@openzeppelin/hardhat-upgrades')
 require('hardhat-spdx-license-identifier')
 require('hardhat-storage-layout')
 require('hardhat-log-remover')
