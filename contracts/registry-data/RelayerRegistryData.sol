@@ -40,9 +40,11 @@ contract RelayerRegistryData {
   /**
   @dev Every time instances are added, governance needs to pass a proposal,
   so except contract initialization, we can let governance add any other pools
+  should be updated together with relayer registry info
    */
-  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance {
+  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256) {
     getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
+    return getPoolDataForPoolId.length - 1;
   }
 
   function setProtocolFee(uint128 newFee) external onlyGovernance {

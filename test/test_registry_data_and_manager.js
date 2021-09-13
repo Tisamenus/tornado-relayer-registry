@@ -21,7 +21,7 @@ describe('Data and Manager tests', () => {
   let RegistryData
 
   //// IMPERSONATED ACCOUNTS
-  let impGov;
+  let impGov
 
   //// NORMAL ACCOUNTS
   let signerArray
@@ -32,7 +32,7 @@ describe('Data and Manager tests', () => {
   }
 
   before(async () => {
-    signerArray = await ethers.getSigners();
+    signerArray = await ethers.getSigners()
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
     OracleHelperLibrary = await OracleHelperFactory.deploy()
@@ -68,29 +68,32 @@ describe('Data and Manager tests', () => {
   })
 
   describe('Start of tests', () => {
-
     describe('Setup procedure', () => {
       it('Should impersonate governance properly', async () => {
         await sendr('hardhat_impersonateAccount', [governance])
         impGov = await ethers.getSigner(governance)
-	await sendr('hardhat_setBalance', [governance, "0xDE0B6B3A7640000"])
-      });
+        await sendr('hardhat_setBalance', [governance, '0xDE0B6B3A7640000'])
+      })
 
       it('Should set RegistryData global params', async () => {
-	regData = await RegistryData.connect(impGov);
-	await regData.setProtocolPeriod(ethers.utils.parseUnits("5400", "wei"));
-	await regData.setProtocolFee(ethers.utils.parseUnits("1000", "szabo"));
-      });
+        regData = await RegistryData.connect(impGov)
+        await regData.setProtocolPeriod(ethers.utils.parseUnits('5400', 'wei'))
+        await regData.setProtocolFee(ethers.utils.parseUnits('1000', 'szabo'))
+      })
 
       it('Should pass initial fee update', async () => {
-	await RegistryData.updateFees();
+        await RegistryData.updateFees()
         for (i = 0; i < 8; i++) {
-	  const poolName = (i <= 3) ? "eth" : "dai";
-	  const constant = (i <= 3) ? 0.1 : 100;
-          console.log(`${poolName}-${constant * (10**(i%4))}-pool fee: `, (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits("1", "szabo")).toNumber()/1000000, `torn`)
+          const poolName = i <= 3 ? 'eth' : 'dai'
+          const constant = i <= 3 ? 0.1 : 100
+          console.log(
+            `${poolName}-${constant * 10 ** (i % 4)}-pool fee: `,
+            (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+              1000000,
+            `torn`,
+          )
         }
-      });
+      })
     })
-
   })
 })

@@ -28,7 +28,6 @@ contract RegistryDataManager {
   // immutable variables need to have a value type, structs can't work
   uint24 public constant uniPoolFeeTorn = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
-  address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
   function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData calldata globalPoolData)
     public

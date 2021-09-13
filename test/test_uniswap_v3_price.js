@@ -48,11 +48,11 @@ describe('Uniswap V3 Price Tests', () => {
     })
 
     it('Should fetch a uniswap v3 price for TORN per ETH', async () => {
-      await expect(PriceContract.getPriceOfWETHInToken(torn, 10000, 5400)).to.not.be.reverted;
+      await expect(PriceContract.getPriceOfWETHInToken(torn, 10000, 5400)).to.not.be.reverted
 
       const priceOfETHInTORN = await PriceContract.lastPriceOfToken(torn)
 
       console.log(priceOfETHInTORN.toString())
-    });
+    })
   })
 })
