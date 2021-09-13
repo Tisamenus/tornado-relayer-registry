@@ -70,12 +70,6 @@ describe('Data and Manager tests', () => {
   describe('Start of tests', () => {
 
     describe('Setup procedure', () => {
-      it('Should have properly initialized all data', async () => {
-        for (i = 0; i < 8; i++) {
-          console.log(await RegistryData.getPoolDataForPoolId(i))
-        }
-      })
-
       it('Should impersonate governance properly', async () => {
         await sendr('hardhat_impersonateAccount', [governance])
         impGov = await ethers.getSigner(governance)
@@ -85,13 +79,15 @@ describe('Data and Manager tests', () => {
       it('Should set RegistryData global params', async () => {
 	regData = await RegistryData.connect(impGov);
 	await regData.setProtocolPeriod(ethers.utils.parseUnits("5400", "wei"));
-	await regData.setProtocolFee(ethers.utils.parseUnits("10", "finney"));
+	await regData.setProtocolFee(ethers.utils.parseUnits("1000", "szabo"));
       });
 
       it('Should pass initial fee update', async () => {
 	await RegistryData.updateFees();
         for (i = 0; i < 8; i++) {
-          console.log(await RegistryData.getFeeForPoolId(i))
+	  const poolName = (i <= 3) ? "eth" : "dai";
+	  const constant = (i <= 3) ? 0.1 : 100;
+          console.log(`${poolName}-${constant * (10**(i%4))}-pool fee: `, (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits("1", "szabo")).toNumber()/1000000, `torn`)
         }
       });
     })

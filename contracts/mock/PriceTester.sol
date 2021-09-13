@@ -25,4 +25,13 @@ contract PriceTester {
     lastPriceOfToken[token] = UniswapV3OracleHelper.getPriceOfTokenInWETH(token, fee, period);
     return lastPriceOfToken[token];
   }
+
+  function getPriceOfWETHInToken(
+    address token,
+    uint24 fee,
+    uint32 period
+  ) public returns (uint256) {
+    lastPriceOfToken[token] = UniswapV3OracleHelper.getPriceOfWETHInToken(token, fee, period);
+    return lastPriceOfToken[token];
+  }
 }

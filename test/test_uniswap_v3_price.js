@@ -30,7 +30,7 @@ describe('Uniswap V3 Price Tests', () => {
   })
 
   describe('Start of tests', () => {
-    it('Should fetch a uniswap v3 price for TORN in ETH', async () => {
+    it('Should fetch a uniswap v3 price for ETH per TORN', async () => {
       await expect(PriceContract.getPriceOfTokenInETH(torn, 10000, 5400)).to.not.be.reverted
 
       const priceOfTORNInETH = await PriceContract.lastPriceOfToken(torn)
@@ -38,7 +38,7 @@ describe('Uniswap V3 Price Tests', () => {
       console.log(priceOfTORNInETH.toString())
     })
 
-    it('Should fetch a uniswap v3 price for TORN in USDC', async () => {
+    it('Should fetch a uniswap v3 price for USDC per TORN', async () => {
       await expect(PriceContract.getPriceOfTokenInToken([torn, usdc], [10000, 10000], 5400)).to.not.be
         .reverted
 
@@ -46,5 +46,13 @@ describe('Uniswap V3 Price Tests', () => {
 
       console.log(priceOfTORNInUSDC.toString())
     })
+
+    it('Should fetch a uniswap v3 price for TORN per ETH', async () => {
+      await expect(PriceContract.getPriceOfWETHInToken(torn, 10000, 5400)).to.not.be.reverted;
+
+      const priceOfETHInTORN = await PriceContract.lastPriceOfToken(torn)
+
+      console.log(priceOfETHInTORN.toString())
+    });
   })
 })

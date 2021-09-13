@@ -46,7 +46,7 @@ contract RegistryDataManager {
               [uniPoolFeeTorn, uint24(poolIdToPoolData[i].uniPoolFee)],
               uint32(globalPoolData.globalPeriod)
             )
-            : UniswapV3OracleHelper.getPriceOfWETHInToken(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
+            : UniswapV3OracleHelper.getPriceOfTokenInWETH(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
         )
         .mul(uint256(globalPoolData.protocolFee))
         .div(1e18);
