@@ -21,7 +21,7 @@ library UniswapV3OracleHelper {
     address quoteToken,
     uint24 fee,
     uint32 period
-  ) public returns (uint256) {
+  ) public view returns (uint256) {
     return
       OracleLibrary.getQuoteAtTick(
         OracleLibrary.consult(UniswapV3Factory.getPool(baseToken, quoteToken, fee), period),
@@ -35,7 +35,7 @@ library UniswapV3OracleHelper {
     address token,
     uint24 fee,
     uint32 period
-  ) public returns (uint256) {
+  ) public view returns (uint256) {
     return getPriceOfTokenInToken(token, WETH, fee, period);
   }
 
@@ -43,7 +43,7 @@ library UniswapV3OracleHelper {
     address[] memory tokens,
     uint24[] memory fees,
     uint32 period
-  ) public returns (uint256) {
+  ) public view returns (uint256) {
     return getPriceOfTokenInWETH(tokens[0], fees[0], period).mul(1e18) / getPriceOfTokenInWETH(tokens[1], fees[1], period);
   }
 }
