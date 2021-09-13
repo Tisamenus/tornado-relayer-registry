@@ -25,7 +25,6 @@ contract RelayerRegistry is EnsResolve {
   uint256 public minStakeAmount;
 
   mapping(bytes32 => uint256) getBalanceForRelayer;
-  mapping(address => uint256) getPoolIdForAddress;
 
   constructor(
     address registryDataAddress,
@@ -55,17 +54,13 @@ contract RelayerRegistry is EnsResolve {
     getBalanceForRelayer[relayer] += stake;
   }
 
-  function addPool(uint256 poolId, address poolAddress) external onlyGovernance {
-    getPoolIdForAddress[poolAddress] = poolId;
-  }
-
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
     minStakeAmount = minAmount;
   }
 
   function burn(bytes32 relayer, address poolAddress) external onlyTornadoProxy {
     getBalanceForRelayer[relayer] = getBalanceForRelayer[relayer].sub(
-      RegistryData.getFeeForPoolId(getPoolIdForAddress[poolAddress])
+      RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress))
     );
   }
 }

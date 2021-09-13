@@ -11,6 +11,7 @@ contract RelayerRegistryData {
 
   PoolData[] public getPoolDataForPoolId;
   uint256[] public getFeeForPoolId;
+  mapping(address => uint256) public getPoolIdForAddress;
 
   GlobalPoolData public protocolPoolData;
 
@@ -25,6 +26,7 @@ contract RelayerRegistryData {
 
     for (uint256 i = 0; i < initPoolDataFees.length; i++) {
       getPoolDataForPoolId.push(PoolData(initPoolDataFees[i], initPoolDataAddresses[i]));
+      getPoolIdForAddress[initPoolDataAddresses[i]] = getPoolDataForPoolId.length - 1;
     }
   }
 
@@ -44,6 +46,7 @@ contract RelayerRegistryData {
    */
   function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256) {
     getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
+    getPoolIdForAddress[poolAddress] = getPoolDataForPoolId.length - 1;
     return getPoolDataForPoolId.length - 1;
   }
 
