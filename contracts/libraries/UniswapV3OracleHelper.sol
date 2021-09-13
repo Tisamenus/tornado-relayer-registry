@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import { OracleLibrary } from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { LowGasSafeMath } from "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 
 interface IERC20Decimals {
-  function decimals() external returns (uint8);
+  function decimals() external view returns (uint8);
 }
 
 library UniswapV3OracleHelper {
@@ -40,8 +41,8 @@ library UniswapV3OracleHelper {
   }
 
   function getPriceRatioOfTokens(
-    address[] memory tokens,
-    uint24[] memory fees,
+    address[2] memory tokens,
+    uint24[2] memory fees,
     uint32 period
   ) public view returns (uint256) {
     return getPriceOfTokenInWETH(tokens[0], fees[0], period).mul(1e18) / getPriceOfTokenInWETH(tokens[1], fees[1], period);

@@ -9,8 +9,8 @@ contract PriceTester {
   uint256 public lastPriceOfATokenInToken;
 
   function getPriceOfTokenInToken(
-    address[] memory tokens,
-    uint24[] memory fees,
+    address[2] memory tokens,
+    uint24[2] memory fees,
     uint32 period
   ) public returns (uint256) {
     lastPriceOfATokenInToken = UniswapV3OracleHelper.getPriceRatioOfTokens(tokens, fees, period);

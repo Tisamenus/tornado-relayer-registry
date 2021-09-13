@@ -25,27 +25,28 @@ struct GlobalPoolData {
 contract RegistryDataManager {
   using SafeMath for uint256;
 
-  PoolData public constant TornTokenData = PoolData(10000, 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C);
+  // immutable variables need to have a value type, structs can't work
+  uint24 public constant uniPoolFeeTorn = 10000;
+  address public constant tornTokenAddress = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
   function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData calldata globalPoolData)
-    external
+    public
     view
     returns (uint256[] memory newPoolIdToFee)
   {
+    newPoolIdToFee = new uint256[](newPoolIdToFee.length);
     for (uint256 i = 0; i < poolIdToPoolData.length; i++) {
-      newPoolIdToFee[i].push(
-        getBalanceOfPool(poolIdToPoolData.addressData)
-          .mul(1e18)
-          .div(
-            UniswapV3OracleHelper.getPriceRatioOfTokens(
-              [TornTokenData.addressData, ERC20Tornado(poolIdToPoolData[i].addressData).token()],
-              [uint24(TornTokenData.uniPoolFee), uint24(poolIdToPoolData[i].uniPoolFee)],
-              uint32(globalPoolData.globalPeriod)
-            )
+      newPoolIdToFee[i] = getBalanceOfPool(poolIdToPoolData[i].addressData)
+        .mul(1e18)
+        .div(
+          UniswapV3OracleHelper.getPriceRatioOfTokens(
+            [tornTokenAddress, ERC20Tornado(poolIdToPoolData[i].addressData).token()],
+            [uniPoolFeeTorn, uint24(poolIdToPoolData[i].uniPoolFee)],
+            uint32(globalPoolData.globalPeriod)
           )
-          .mul(uint256(globalPoolData.protocolFee))
-          .div(1e18)
-      );
+        )
+        .mul(uint256(globalPoolData.protocolFee))
+        .div(1e18);
     }
   }
 
