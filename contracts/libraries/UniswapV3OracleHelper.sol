@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
 
 import { OracleLibrary } from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
@@ -38,6 +37,14 @@ library UniswapV3OracleHelper {
     uint32 period
   ) public view returns (uint256) {
     return getPriceOfTokenInToken(token, WETH, fee, period);
+  }
+
+  function getPriceOfWETHInToken(
+    address token,
+    uint24 fee,
+    uint32 period
+  ) public view returns (uint256) {
+    return getPriceOfTokenInToken(WETH, token, fee, period);
   }
 
   function getPriceRatioOfTokens(

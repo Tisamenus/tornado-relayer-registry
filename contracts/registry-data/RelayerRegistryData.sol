@@ -14,9 +14,18 @@ contract RelayerRegistryData {
 
   GlobalPoolData public protocolPoolData;
 
-  constructor(address _dataManagerProxy, address _tornadoGovernance) public {
-    DataManager = RegistryDataManager(_dataManagerProxy);
-    Governance = _tornadoGovernance;
+  constructor(
+    address dataManagerProxy,
+    address tornadoGovernance,
+    uint96[] memory initPoolDataFees,
+    address[] memory initPoolDataAddresses
+  ) public {
+    DataManager = RegistryDataManager(dataManagerProxy);
+    Governance = tornadoGovernance;
+
+    for (uint256 i = 0; i < initPoolDataFees.length; i++) {
+      getPoolDataForPoolId.push(PoolData(initPoolDataFees[i], initPoolDataAddresses[i]));
+    }
   }
 
   modifier onlyGovernance() {
@@ -28,11 +37,19 @@ contract RelayerRegistryData {
     getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
   }
 
-  function setProtocolFee(uint128 _newFee) external onlyGovernance {
-    protocolPoolData.protocolFee = _newFee;
+  /**
+  @dev Every time instances are added, governance needs to pass a proposal,
+  so except contract initialization, we can let governance add any other pools
+   */
+  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance {
+    getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
   }
 
-  function setProtocolPeriod(uint128 _newPeriod) external onlyGovernance {
-    protocolPoolData.globalPeriod = _newPeriod;
+  function setProtocolFee(uint128 newFee) external onlyGovernance {
+    protocolPoolData.protocolFee = newFee;
+  }
+
+  function setProtocolPeriod(uint128 newPeriod) external onlyGovernance {
+    protocolPoolData.globalPeriod = newPeriod;
   }
 }

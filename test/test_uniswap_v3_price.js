@@ -2,7 +2,7 @@ const { ethers } = require('hardhat')
 const { BigNumber } = require('@ethersproject/bignumber')
 const { expect } = require('chai')
 
-describe('Tests start of script', () => {
+describe('Uniswap V3 Price Tests', () => {
   /// HARDCODED
   let torn = '0x77777FeDdddFfC19Ff86DB637967013e6C6A116C'
   let usdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
