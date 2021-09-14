@@ -61,9 +61,9 @@ contract RelayerRegistry is EnsResolve {
     RelayerMetadata memory metadata
   ) external onlyRelayer(ensName) {
     require(!getMetadataForRelayer[ensName].isRegistered, "registered");
-    stakeToRelayer(ensName, stake);
     if (!metadata.isRegistered) metadata.isRegistered = true;
     getMetadataForRelayer[ensName] = metadata;
+    stakeToRelayer(ensName, stake);
   }
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {

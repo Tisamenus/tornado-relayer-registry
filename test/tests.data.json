@@ -1,0 +1,31 @@
+{
+  "mainnet": {
+    "tornado_cash_addresses": {
+      "governance": "0x5efda50f22d34F262c29268506C5Fa42cB56A1Ce",
+      "multisig": "0xb04E030140b30C27bcdfaafFFA98C57d80eDa7B4"
+    },
+    "token_addresses": {
+      "torn": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",
+      "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "dai": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      "usdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    "project_specific": {
+      "contract_construction": {
+        "RelayerRegistryData": {
+          "tornado_pools": [
+            "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc",
+            "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936",
+            "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",
+            "0xa160cdab225685da1d56aa342ad8841c3b53f291",
+            "0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3",
+            "0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144",
+            "0x07687e702b410fa43f4cb4af7fa097918ffd2730",
+            "0x23773e65ed146a459791799d01336db287f25334"
+          ],
+          "uniswap_pool_fees": [0, 0, 0, 0, 3000, 3000, 3000, 3000]
+        }
+      }
+    }
+  }
+}

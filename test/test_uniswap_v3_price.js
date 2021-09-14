@@ -1,12 +1,10 @@
 const { ethers } = require('hardhat')
-const { BigNumber } = require('@ethersproject/bignumber')
 const { expect } = require('chai')
+const { mainnet } = require("./tests.data.json");
+const { token_addresses } = mainnet;
+const {torn, usdc} = token_addresses;
 
 describe('Uniswap V3 Price Tests', () => {
-  /// HARDCODED
-  let torn = '0x77777FeDdddFfC19Ff86DB637967013e6C6A116C'
-  let usdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-
   //// LIBRARIES
   let PriceHelperLibrary
   let PriceHelperFactory
@@ -31,7 +29,7 @@ describe('Uniswap V3 Price Tests', () => {
 
   describe('Start of tests', () => {
     it('Should fetch a uniswap v3 price for ETH per TORN', async () => {
-      await expect(PriceContract.getPriceOfTokenInETH(torn, 10000, 5400)).to.not.be.reverted
+      await expect(PriceContract.getPriceOfTokenInETH(torn, 10000, 1000)).to.not.be.reverted
 
       const priceOfTORNInETH = await PriceContract.lastPriceOfToken(torn)
 
@@ -39,7 +37,7 @@ describe('Uniswap V3 Price Tests', () => {
     })
 
     it('Should fetch a uniswap v3 price for USDC per TORN', async () => {
-      await expect(PriceContract.getPriceOfTokenInToken([torn, usdc], [10000, 10000], 5400)).to.not.be
+      await expect(PriceContract.getPriceOfTokenInToken([torn, usdc], [10000, 10000], 1000)).to.not.be
         .reverted
 
       const priceOfTORNInUSDC = await PriceContract.lastPriceOfATokenInToken()
@@ -48,7 +46,7 @@ describe('Uniswap V3 Price Tests', () => {
     })
 
     it('Should fetch a uniswap v3 price for TORN per ETH', async () => {
-      await expect(PriceContract.getPriceOfWETHInToken(torn, 10000, 5400)).to.not.be.reverted
+      await expect(PriceContract.getPriceOfWETHInToken(torn, 10000, 1000)).to.not.be.reverted
 
       const priceOfETHInTORN = await PriceContract.lastPriceOfToken(torn)
 
