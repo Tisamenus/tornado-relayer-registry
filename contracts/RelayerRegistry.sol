@@ -9,7 +9,8 @@ import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 
 struct RelayerMetadata {
-  uint256 fee;
+  bool isRegistered;
+  uint248 fee;
 }
 
 contract RelayerRegistry is EnsResolve {
@@ -24,7 +25,8 @@ contract RelayerRegistry is EnsResolve {
 
   uint256 public minStakeAmount;
 
-  mapping(bytes32 => uint256) getBalanceForRelayer;
+  mapping(bytes32 => uint256) public getBalanceForRelayer;
+  mapping(bytes32 => RelayerMetadata) public getMetadataForRelayer;
 
   constructor(
     address registryDataAddress,
@@ -48,10 +50,20 @@ contract RelayerRegistry is EnsResolve {
     _;
   }
 
-  function stakeToRelayer(bytes32 relayer, uint256 stake) external {
-    require(stake.add(getBalanceForRelayer[relayer]) >= minStakeAmount, "min_stake");
-    require(torn.transferFrom(resolve(relayer), Governance, stake), "transfer");
-    getBalanceForRelayer[relayer] += stake;
+  modifier onlyRelayer(bytes32 relayer) {
+    require(msg.sender == resolve(relayer));
+    _;
+  }
+
+  function register(
+    bytes32 ensName,
+    uint256 stake,
+    RelayerMetadata memory metadata
+  ) external onlyRelayer(ensName) {
+    require(!getMetadataForRelayer[ensName].isRegistered, "registered");
+    stakeToRelayer(ensName, stake);
+    if (!metadata.isRegistered) metadata.isRegistered = true;
+    getMetadataForRelayer[ensName] = metadata;
   }
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
@@ -62,5 +74,20 @@ contract RelayerRegistry is EnsResolve {
     getBalanceForRelayer[relayer] = getBalanceForRelayer[relayer].sub(
       RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress))
     );
+  }
+
+  function getRelayerFee(bytes32 relayer) external view returns (uint256) {
+    return getMetadataForRelayer[relayer].fee;
+  }
+
+  function isRelayerRegistered(bytes32 relayer) external view returns (bool) {
+    return getMetadataForRelayer[relayer].isRegistered;
+  }
+
+  function stakeToRelayer(bytes32 relayer, uint256 stake) public {
+    require(getMetadataForRelayer[relayer].isRegistered, "!registered");
+    require(stake.add(getBalanceForRelayer[relayer]) >= minStakeAmount, "!min_stake");
+    require(torn.transferFrom(resolve(relayer), Governance, stake), "!transfer");
+    getBalanceForRelayer[relayer] += stake;
   }
 }
