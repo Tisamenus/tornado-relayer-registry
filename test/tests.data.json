@@ -25,6 +25,9 @@
           ],
           "uniswap_pool_fees": [0, 0, 0, 0, 3000, 3000, 3000, 3000]
         }
+      },
+      "mocking":  {
+        ".eth_registrar_controller": "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85"
       }
     }
   }

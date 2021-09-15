@@ -3,6 +3,7 @@ const { expect } = require('chai')
 const { mainnet } = require("./tests.data.json");
 const { token_addresses } = mainnet;
 const { torn } = token_addresses;
+const { namehash } = require('@ethersproject/hash');
 
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
@@ -24,6 +25,8 @@ describe('Data and Manager tests', () => {
   let RelayerRegistry
   let RegistryFactory
 
+  let ControllerContract;
+
   //// IMPERSONATED ACCOUNTS
   let impGov
   let tornWhale
@@ -43,6 +46,20 @@ describe('Data and Manager tests', () => {
   let erc20Transfer = async (tokenAddress, senderWallet, recipientAddress, amount) => {
     const token = (await getToken(tokenAddress)).connect(senderWallet)
     return await token.transfer(recipientAddress,amount)
+  }
+
+  let register = async (Name, Owner, Duration, Controller) => {
+    const random = new Uint8Array(32);
+    for(i = 0; i < 32; i++) { random[i] = Math.floor(Math.random() * 200) }
+    const salt = "0x" + Array.from(random).map(b => b.toString(16).padStart(2, "0")).join("");
+    const commitment = await Controller.makeCommitment(Name, Owner, salt);
+    const tx = await Controller.commit(commitment);
+    const price = (await Controller.rentPrice(Name, Duration)) * 1.1;
+
+    setTimeout(async () => {
+      // Submit our registration request
+      await controller.register(name, owner, duration, salt, {value: price});
+    }, 60000);
   }
 
   before(async () => {
@@ -74,6 +91,8 @@ describe('Data and Manager tests', () => {
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
     RelayerRegistry = await RegistryFactory.deploy(RegistryData.address, governance, torn, DataManagerProxy.address)
+
+    ControllerContract = await ethers.getContractAt('@ensdomains/ens-contracts/contracts/ethregistrar/ETHRegistrarController.sol:ETHRegistrarController', mainnet.project_specific.mocking['.eth_registrar_controller'])
   })
 
   describe('Start of tests', () => {
@@ -131,13 +150,17 @@ describe('Data and Manager tests', () => {
       it('Should successfully prepare a couple of relayer wallets', async () => {
 	for(i = 0; i < 4; i++) {
 	  const name = `relayer-${i}.eth`
-	  console.log(name)
 	  relayers[i] = {
-	    ensName: ethers.utils.formatBytes32String(name.toString()),
+	    bytes32Name: namehash(name),
+	    ensName: name,
 	    address: signerArray[i+offset].address,
 	    wallet: signerArray[i+offset]
 	  }
 	  await expect(() => erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther("101"))).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther("101"))
+
+	  const controller = await ControllerContract.connect(relayers[i].wallet);
+
+	  await register(relayers[i].ensName, relayers[i].address, 24*60*60*365, controller)
 	}
       })
 
@@ -147,7 +170,7 @@ describe('Data and Manager tests', () => {
 	for(i = 0; i < 4; i++) {
 	  ((await getToken(torn)).connect(relayers[i].wallet)).approve(RelayerRegistry.address, ethers.utils.parseEther("300"))
 
-	  await RelayerRegistry.register(relayers[i].ensName, ethers.utils.parseEther("101"), metadata)
+	  await RelayerRegistry.register(relayers[i].bytes32Name, ethers.utils.parseEther("101"), metadata)
 
 	  expect(await RelayerRegistry.isRelayerRegistered(relayers[i].ensName)).to.be.true;
 	  expect(await RelayerRegistry.getRelayerFee(relayers[i].ensName)).to.equal(metadata.fee);
