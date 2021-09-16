@@ -11,6 +11,7 @@ contract RelayerRegistryData {
 
   PoolData[] public getPoolDataForPoolId;
   uint256[] public getFeeForPoolId;
+
   mapping(address => uint256) public getPoolIdForAddress;
 
   GlobalPoolData public protocolPoolData;

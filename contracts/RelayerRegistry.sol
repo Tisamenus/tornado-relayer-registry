@@ -22,10 +22,9 @@ contract RelayerRegistry is EnsResolve {
 
   address public immutable governance;
   address public immutable tornadoProxy;
+
   ITornadoStakingRewards public immutable staking;
-
   IERC20 public immutable torn;
-
   RelayerRegistryData public immutable RegistryData;
 
   uint256 public minStakeAmount;
