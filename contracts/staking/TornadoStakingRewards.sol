@@ -55,6 +55,14 @@ contract TornadoStakingRewards {
     stakedAmount += claimed;
   }
 
+  function setStakedAmountOnLock(uint256 amount) external onlyGovernance {
+    stakedAmount = stakedAmount.add(amount);
+  }
+
+  function setStakedAmountOnUnlock(uint256 amount) external onlyGovernance {
+    stakedAmount = stakedAmount.sub(amount);
+  }
+
   function setDistributionPeriod(uint256 period) external onlyGovernance {
     distributionPeriod = period;
   }

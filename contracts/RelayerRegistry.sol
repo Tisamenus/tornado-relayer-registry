@@ -31,6 +31,7 @@ contract RelayerRegistry is EnsResolve {
 
   mapping(bytes32 => uint256) public getBalanceForRelayer;
   mapping(bytes32 => RelayerMetadata) public getMetadataForRelayer;
+  mapping(address => bytes32) public getRelayerForAddress;
 
   constructor(
     address registryDataAddress,
@@ -69,6 +70,7 @@ contract RelayerRegistry is EnsResolve {
     require(!getMetadataForRelayer[ensName].isRegistered, "registered");
     if (!metadata.isRegistered) metadata.isRegistered = true;
     getMetadataForRelayer[ensName] = metadata;
+    getRelayerForAddress[resolve(ensName)] = ensName;
     stakeToRelayer(ensName, stake);
   }
 

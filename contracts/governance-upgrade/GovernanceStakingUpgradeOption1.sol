@@ -7,13 +7,18 @@ import { GovernanceVaultUpgrade } from "../../submodules/tornado-lottery-period/
 
 interface ITornadoStakingRewards {
   function governanceClaimFor(address recipient, address vault) external;
+
   function setStakePoints(address staker, uint256 amountLockedBeforehand) external;
+
+  function setStakedAmountOnLock(uint256 amount) external;
+
+  function setStakedAmountOnUnlock(uint256 amount) external;
 }
 
 contract GovernanceStakingUpgradeOption1 is GovernanceVaultUpgrade {
   ITornadoStakingRewards public immutable staking;
 
-  constructor(address stakingRewardsAddress) public {
+  constructor(address stakingRewardsAddress, address userVaultAddress) public GovernanceVaultUpgrade(userVaultAddress) {
     staking = ITornadoStakingRewards(stakingRewardsAddress);
   }
 
@@ -27,18 +32,23 @@ contract GovernanceStakingUpgradeOption1 is GovernanceVaultUpgrade {
   ) external virtual override {
     uint256 claimed = staking.governanceClaimFor(owner, address(userVault));
     staking.setStakePoints(owner, lockedBalance[owner]);
-    super.lock(owner, amount.add(claimed), deadline, v, r,s);
+    super.lock(owner, amount, deadline, v, r, s);
+    lockedBalance[owner] += claimed;
+    staking.setStakedAmountOnLock(amount.add(claimed));
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
     uint256 claimed = staking.governanceClaimFor(msg.sender, address(userVault));
     staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
-    super.lockWithApproval(amount.add(claimed));
+    super.lockWithApproval(amount);
+    lockedBalance[owner] += claimed;
+    staking.setStakedAmountOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
     staking.governanceClaimFor(msg.sender, msg.sender);
     staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
     super.unlock(amount);
+    staking.setStakedAmountOnUnlock(amount);
   }
 }

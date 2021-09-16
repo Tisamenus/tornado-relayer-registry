@@ -78,7 +78,7 @@ describe('Data and Manager tests', () => {
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
 
-    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther("20"))
+    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther('20'))
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
@@ -87,7 +87,7 @@ describe('Data and Manager tests', () => {
       governance,
       torn,
       DataManagerProxy.address,
-      StakingContract.address
+      StakingContract.address,
     )
   })
 
@@ -120,9 +120,9 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should setup StakingRewards', async () => {
-	const staking = await StakingContract.connect(impGov)
-	await staking.setDistributionPeriod(6*3600);
-	expect(await StakingContract.distributionPeriod()).to.equal(6*3600)
+        const staking = await StakingContract.connect(impGov)
+        await staking.setDistributionPeriod(6 * 3600)
+        expect(await StakingContract.distributionPeriod()).to.equal(6 * 3600)
       })
     })
 
@@ -164,7 +164,7 @@ describe('Data and Manager tests', () => {
           }
 
           await expect(() =>
-            signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address })
+            signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address }),
           ).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther('1'))
 
           await expect(() =>
@@ -185,7 +185,12 @@ describe('Data and Manager tests', () => {
 
           await registry.register(relayers[i].node, ethers.utils.parseEther('101'), metadata)
 
-	  console.log("Share price: ", (await StakingContract.currentSharePrice()).toString(), ", staked amount: ", (await StakingContract.stakedAmount()).toString())
+          console.log(
+            'Share price: ',
+            (await StakingContract.currentSharePrice()).toString(),
+            ', staked amount: ',
+            (await StakingContract.stakedAmount()).toString(),
+          )
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
