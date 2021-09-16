@@ -4,6 +4,7 @@ const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
 const { torn } = token_addresses
 const { namehash } = require('@ethersproject/hash')
+const { BigNumber } = require('@ethersproject/bignumber')
 
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
@@ -117,6 +118,12 @@ describe('Data and Manager tests', () => {
           )
         }
       })
+
+      it('Should setup StakingRewards', async () => {
+	const staking = await StakingContract.connect(impGov)
+	await staking.setDistributionPeriod(6*3600);
+	expect(await StakingContract.distributionPeriod()).to.equal(6*3600)
+      })
     })
 
     describe('Setup procedure RelayerRegistry', () => {
@@ -157,7 +164,7 @@ describe('Data and Manager tests', () => {
           }
 
           await expect(() =>
-            signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address }),
+            signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address })
           ).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther('1'))
 
           await expect(() =>
@@ -177,6 +184,8 @@ describe('Data and Manager tests', () => {
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
           await registry.register(relayers[i].node, ethers.utils.parseEther('101'), metadata)
+
+	  console.log("Share price: ", (await StakingContract.currentSharePrice()).toString(), ", staked amount: ", (await StakingContract.stakedAmount()).toString())
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
