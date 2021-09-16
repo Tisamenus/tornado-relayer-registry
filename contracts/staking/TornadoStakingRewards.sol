@@ -50,8 +50,9 @@ contract TornadoStakingRewards {
     return _consumeStakePoints(msg.sender, msg.sender);
   }
 
-  function governanceClaimFor(address recipient, address vault) external onlyGovernance {
-    stakedAmount += _consumeStakePoints(recipient, vault);
+  function governanceClaimFor(address recipient, address vault) external onlyGovernance returns (uint256 claimed) {
+    claimed = _consumeStakePoints(recipient, vault);
+    stakedAmount += claimed;
   }
 
   function setDistributionPeriod(uint256 period) external onlyGovernance {
