@@ -25,6 +25,9 @@ describe('Data and Manager tests', () => {
   let RelayerRegistry
   let RegistryFactory
 
+  let StakingFactory
+  let StakingContract
+
   //// IMPERSONATED ACCOUNTS
   let impGov
   let tornWhale
@@ -72,6 +75,10 @@ describe('Data and Manager tests', () => {
       tornadoPools,
     )
 
+    StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
+
+    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther("20"))
+
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
     RelayerRegistry = await RegistryFactory.deploy(
@@ -79,6 +86,7 @@ describe('Data and Manager tests', () => {
       governance,
       torn,
       DataManagerProxy.address,
+      StakingContract.address
     )
   })
 
@@ -113,7 +121,7 @@ describe('Data and Manager tests', () => {
 
     describe('Setup procedure RelayerRegistry', () => {
       it('Should have deployed Registry with proper data', async () => {
-        expect(await RelayerRegistry.Governance()).to.equal(governance)
+        expect(await RelayerRegistry.governance()).to.equal(governance)
         expect(await RelayerRegistry.tornadoProxy()).to.equal(DataManagerProxy.address)
         expect(await RelayerRegistry.torn()).to.equal(torn)
       })
@@ -164,7 +172,7 @@ describe('Data and Manager tests', () => {
         for (i = 0; i < 4; i++) {
           ;(await getToken(torn))
             .connect(relayers[i].wallet)
-            .approve(RelayerRegistry.address, ethers.utils.parseEther('300'))
+            .approve(StakingContract.address, ethers.utils.parseEther('300'))
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
