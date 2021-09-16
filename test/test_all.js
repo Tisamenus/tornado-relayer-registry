@@ -1,9 +1,9 @@
 const { ethers, upgrades } = require('hardhat')
 const { expect } = require('chai')
-const { mainnet } = require("./tests.data.json");
-const { token_addresses } = mainnet;
-const { torn } = token_addresses;
-const { namehash } = require('@ethersproject/hash');
+const { mainnet } = require('./tests.data.json')
+const { token_addresses } = mainnet
+const { torn } = token_addresses
+const { namehash } = require('@ethersproject/hash')
 
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
@@ -43,7 +43,7 @@ describe('Data and Manager tests', () => {
 
   let erc20Transfer = async (tokenAddress, senderWallet, recipientAddress, amount) => {
     const token = (await getToken(tokenAddress)).connect(senderWallet)
-    return await token.transfer(recipientAddress,amount)
+    return await token.transfer(recipientAddress, amount)
   }
 
   before(async () => {
@@ -74,8 +74,12 @@ describe('Data and Manager tests', () => {
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
-    RelayerRegistry = await RegistryFactory.deploy(RegistryData.address, governance, torn, DataManagerProxy.address)
-
+    RelayerRegistry = await RegistryFactory.deploy(
+      RegistryData.address,
+      governance,
+      torn,
+      DataManagerProxy.address,
+    )
   })
 
   describe('Start of tests', () => {
@@ -109,15 +113,15 @@ describe('Data and Manager tests', () => {
 
     describe('Setup procedure RelayerRegistry', () => {
       it('Should have deployed Registry with proper data', async () => {
-        expect(await RelayerRegistry.Governance()).to.equal(governance);
-        expect(await RelayerRegistry.tornadoProxy()).to.equal(DataManagerProxy.address);
-        expect(await RelayerRegistry.torn()).to.equal(torn);
+        expect(await RelayerRegistry.Governance()).to.equal(governance)
+        expect(await RelayerRegistry.tornadoProxy()).to.equal(DataManagerProxy.address)
+        expect(await RelayerRegistry.torn()).to.equal(torn)
       })
 
       it('Should set min stake amount to 100 TORN', async () => {
-	const relReg = await RelayerRegistry.connect(impGov)
-	await relReg.setMinStakeAmount(ethers.utils.parseEther("100"))
-	expect(await relReg.minStakeAmount()).to.equal(ethers.utils.parseEther("100"))
+        const relReg = await RelayerRegistry.connect(impGov)
+        await relReg.setMinStakeAmount(ethers.utils.parseEther('100'))
+        expect(await relReg.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
       })
 
       it('Should successfully imitate a torn whale', async () => {
@@ -127,42 +131,48 @@ describe('Data and Manager tests', () => {
     })
 
     describe('Test registry registration', () => {
-      let relayers = [];
+      let relayers = []
 
       it('Should successfully prepare a couple of relayer wallets', async () => {
-	for(i = 0; i < 4; i++) {
-	  const name = mainnet.project_specific.mocking.relayer_data[i][0]
-	  const address = mainnet.project_specific.mocking.relayer_data[i][1]
-	  const node = mainnet.project_specific.mocking.relayer_data[i][2]
+        for (i = 0; i < 4; i++) {
+          const name = mainnet.project_specific.mocking.relayer_data[i][0]
+          const address = mainnet.project_specific.mocking.relayer_data[i][1]
+          const node = mainnet.project_specific.mocking.relayer_data[i][2]
 
-	  await sendr('hardhat_impersonateAccount', [address])
+          await sendr('hardhat_impersonateAccount', [address])
 
-	  relayers[i] = {
-	    node: node,
-	    ensName: name,
-	    address: address,
-	    wallet: await ethers.getSigner(address)
-	  }
+          relayers[i] = {
+            node: node,
+            ensName: name,
+            address: address,
+            wallet: await ethers.getSigner(address),
+          }
 
-	  await expect(() => signerArray[0].sendTransaction({value: ethers.utils.parseEther("1"), to: relayers[i].address})).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther("1"))
+          await expect(() =>
+            signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address }),
+          ).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther('1'))
 
-	  await expect(() => erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther("101"))).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther("101"))
-	}
+          await expect(() =>
+            erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('101')),
+          ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('101'))
+        }
       })
 
       it('Should succesfully register all relayers', async () => {
-	const metadata = {isRegistered: true, fee: ethers.utils.parseEther("0.1")}
+        const metadata = { isRegistered: true, fee: ethers.utils.parseEther('0.1') }
 
-	for(i = 0; i < 4; i++) {
-	  ((await getToken(torn)).connect(relayers[i].wallet)).approve(RelayerRegistry.address, ethers.utils.parseEther("300"))
+        for (i = 0; i < 4; i++) {
+          ;(await getToken(torn))
+            .connect(relayers[i].wallet)
+            .approve(RelayerRegistry.address, ethers.utils.parseEther('300'))
 
-	  const registry = await RelayerRegistry.connect(relayers[i].wallet)
+          const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-	  await registry.register(relayers[i].node, ethers.utils.parseEther("101"), metadata)
+          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), metadata)
 
-	  expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true;
-	  expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee);
-	}
+          expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
+          expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
+        }
       })
     })
   })

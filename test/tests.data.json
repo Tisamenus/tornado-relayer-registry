@@ -26,13 +26,29 @@
           "uniswap_pool_fees": [0, 0, 0, 0, 3000, 3000, 3000, 3000]
         }
       },
-      "mocking":  {
+      "mocking": {
         "relayer_data": [
-	  ["mainnet-v2.defidevotee.eth", "0x49136693081f2c18E2cF14428dD78cd90A22dC1f", "0x7232ba5a2ef229abeb3052b2e8eabe103f72db3cd02761132205637c1dd7335e"],
-	  ["mainnet-v2.tornadosolutions.eth", "0xA8aF5873C59DCA72E632930BB683b9b749b82F3c", "0x5959344f8cb3876c68140ebb5b5fa00f8337d00408467d847432c6a1fa0560f1"],
-	  ["mainnet-v2.steamer.eth", "0xe4B424E1cCc6f08768C921455F83181bacBfE3F0", "0x4cd72e8036b05abc5b7861d052fab3a35b7e270dabcd1e62c6e183a0d2d6cca9"],
-	  ["mainnet.lowcost.eth", "0x5C47185e0c026151C978ff1e36c1309Bd71Da9C3", "0x28a0c5f729159dadb7e5024e28387598046ba90d2d856a3d6ebe0f4fa758f51d"]
-	]
+          [
+            "mainnet-v2.defidevotee.eth",
+            "0x49136693081f2c18E2cF14428dD78cd90A22dC1f",
+            "0x7232ba5a2ef229abeb3052b2e8eabe103f72db3cd02761132205637c1dd7335e"
+          ],
+          [
+            "mainnet-v2.tornadosolutions.eth",
+            "0xA8aF5873C59DCA72E632930BB683b9b749b82F3c",
+            "0x5959344f8cb3876c68140ebb5b5fa00f8337d00408467d847432c6a1fa0560f1"
+          ],
+          [
+            "mainnet-v2.steamer.eth",
+            "0xe4B424E1cCc6f08768C921455F83181bacBfE3F0",
+            "0x4cd72e8036b05abc5b7861d052fab3a35b7e270dabcd1e62c6e183a0d2d6cca9"
+          ],
+          [
+            "mainnet.lowcost.eth",
+            "0x5C47185e0c026151C978ff1e36c1309Bd71Da9C3",
+            "0x28a0c5f729159dadb7e5024e28387598046ba90d2d856a3d6ebe0f4fa758f51d"
+          ]
+        ]
       }
     }
   }

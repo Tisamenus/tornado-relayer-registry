@@ -8,6 +8,10 @@ import { EnsResolve } from "./interfaces/EnsResolve.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 
+interface ITornadoStakingRewards {
+  function addStake(address sender, uint256 tornAmount) external;
+}
+
 struct RelayerMetadata {
   bool isRegistered;
   uint248 fee;
@@ -16,8 +20,9 @@ struct RelayerMetadata {
 contract RelayerRegistry is EnsResolve {
   using SafeMath for uint256;
 
-  address public immutable Governance;
+  address public immutable governance;
   address public immutable tornadoProxy;
+  ITornadoStakingRewards public immutable staking;
 
   IERC20 public immutable torn;
 
@@ -32,16 +37,18 @@ contract RelayerRegistry is EnsResolve {
     address registryDataAddress,
     address tornadoGovernance,
     address tornAddress,
-    address tornadoProxyAddress
+    address tornadoProxyAddress,
+    address stakingAddress
   ) public {
     RegistryData = RelayerRegistryData(registryDataAddress);
-    Governance = tornadoGovernance;
+    governance = tornadoGovernance;
     torn = IERC20(tornAddress);
     tornadoProxy = tornadoProxyAddress;
+    staking = ITornadoStakingRewards(stakingAddress);
   }
 
   modifier onlyGovernance() {
-    require(msg.sender == Governance);
+    require(msg.sender == governance);
     _;
   }
 
@@ -76,6 +83,10 @@ contract RelayerRegistry is EnsResolve {
     );
   }
 
+  function nullifyBalance(bytes32 relayer) external onlyGovernance {
+    getBalanceForRelayer[relayer] = 0;
+  }
+
   function getRelayerFee(bytes32 relayer) external view returns (uint256) {
     return getMetadataForRelayer[relayer].fee;
   }
@@ -87,7 +98,7 @@ contract RelayerRegistry is EnsResolve {
   function stakeToRelayer(bytes32 relayer, uint256 stake) public {
     require(getMetadataForRelayer[relayer].isRegistered, "!registered");
     require(stake.add(getBalanceForRelayer[relayer]) >= minStakeAmount, "!min_stake");
-    require(torn.transferFrom(resolve(relayer), Governance, stake), "!transfer");
+    staking.addStake(resolve(relayer), stake);
     getBalanceForRelayer[relayer] += stake;
   }
 }

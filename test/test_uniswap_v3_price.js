@@ -1,8 +1,8 @@
 const { ethers } = require('hardhat')
 const { expect } = require('chai')
-const { mainnet } = require("./tests.data.json");
-const { token_addresses } = mainnet;
-const {torn, usdc} = token_addresses;
+const { mainnet } = require('./tests.data.json')
+const { token_addresses } = mainnet
+const { torn, usdc } = token_addresses
 
 describe('Uniswap V3 Price Tests', () => {
   //// LIBRARIES
