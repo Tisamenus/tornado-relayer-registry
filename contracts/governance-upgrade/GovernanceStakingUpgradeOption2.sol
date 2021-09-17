@@ -3,10 +3,10 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { GovernanceLotteryUpgrade } from "../../submodules/tornado-lottery-period/contracts/vault/GovernanceLotteryUpgrade.sol";
+import { GovernanceLotteryUpgrade } from "../../submodules/tornado-lottery-period/contracts/lottery/GovernanceLotteryUpgrade.sol";
 
 interface ITornadoStakingRewards {
-  function governanceClaimFor(address recipient, address vault) external;
+  function governanceClaimFor(address recipient, address vault) external returns (uint256);
 
   function setStakePoints(address staker, uint256 amountLockedBeforehand) external;
 
@@ -37,7 +37,10 @@ contract GovernanceStakingUpgradeOption2 is GovernanceLotteryUpgrade {
   ) external virtual override {
     uint256 claimed = staking.governanceClaimFor(owner, address(userVault));
     staking.setStakePoints(owner, lockedBalance[owner]);
-    super.lock(owner, amount, deadline, v, r, s);
+
+    torn.permit(owner, address(this), amount, deadline, v, r, s);
+    _transferTokens(owner, amount);
+
     lockedBalance[owner] += claimed;
     staking.setStakedAmountOnLock(amount.add(claimed));
   }
@@ -45,15 +48,21 @@ contract GovernanceStakingUpgradeOption2 is GovernanceLotteryUpgrade {
   function lockWithApproval(uint256 amount) external virtual override {
     uint256 claimed = staking.governanceClaimFor(msg.sender, address(userVault));
     staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
-    super.lockWithApproval(amount);
-    lockedBalance[owner] += claimed;
+
+    _transferTokens(msg.sender, amount);
+
+    lockedBalance[msg.sender] += claimed;
     staking.setStakedAmountOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
     staking.governanceClaimFor(msg.sender, msg.sender);
     staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
-    super.unlock(amount);
+
+    require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
+    lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
+    require(torn.transfer(msg.sender, amount), "TORN: transfer failed");
+
     staking.setStakedAmountOnUnlock(amount);
   }
 }
