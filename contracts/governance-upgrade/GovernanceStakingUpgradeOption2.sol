@@ -61,7 +61,7 @@ contract GovernanceStakingUpgradeOption2 is GovernanceLotteryUpgrade {
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
-    require(torn.transfer(msg.sender, amount), "TORN: transfer failed");
+    userVault.withdrawTorn(msg.sender, amount);
 
     staking.setStakedAmountOnUnlock(amount);
   }
