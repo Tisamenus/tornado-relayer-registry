@@ -86,7 +86,6 @@ describe('Data and Manager tests', () => {
       RegistryData.address,
       governance,
       torn,
-      DataManagerProxy.address,
       StakingContract.address,
     )
   })

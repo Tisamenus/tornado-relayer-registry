@@ -21,13 +21,13 @@ contract RelayerRegistry is EnsResolve {
   using SafeMath for uint256;
 
   address public immutable governance;
-  address public immutable tornadoProxy;
 
   ITornadoStakingRewards public immutable staking;
   IERC20 public immutable torn;
   RelayerRegistryData public immutable RegistryData;
 
   uint256 public minStakeAmount;
+  address public tornadoProxy;
 
   mapping(bytes32 => uint256) public getBalanceForRelayer;
   mapping(bytes32 => RelayerMetadata) public getMetadataForRelayer;
@@ -37,13 +37,11 @@ contract RelayerRegistry is EnsResolve {
     address registryDataAddress,
     address tornadoGovernance,
     address tornAddress,
-    address tornadoProxyAddress,
     address stakingAddress
   ) public {
     RegistryData = RelayerRegistryData(registryDataAddress);
     governance = tornadoGovernance;
     torn = IERC20(tornAddress);
-    tornadoProxy = tornadoProxyAddress;
     staking = ITornadoStakingRewards(stakingAddress);
   }
 
@@ -74,14 +72,19 @@ contract RelayerRegistry is EnsResolve {
     stakeToRelayer(ensName, stake);
   }
 
-  function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
-    minStakeAmount = minAmount;
-  }
-
   function burn(bytes32 relayer, address poolAddress) external onlyTornadoProxy {
     getBalanceForRelayer[relayer] = getBalanceForRelayer[relayer].sub(
       RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress))
     );
+  }
+
+  function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
+    minStakeAmount = minAmount;
+  }
+
+  function registerProxy(address tornadoProxyAddress) external onlyGovernance {
+    require(tornadoProxy == address(0));
+    tornadoProxy = tornadoProxyAddress;
   }
 
   function nullifyBalance(bytes32 relayer) external onlyGovernance {
