@@ -128,7 +128,6 @@ describe('Data and Manager tests', () => {
     describe('Setup procedure RelayerRegistry', () => {
       it('Should have deployed Registry with proper data', async () => {
         expect(await RelayerRegistry.governance()).to.equal(governance)
-        expect(await RelayerRegistry.tornadoProxy()).to.equal(DataManagerProxy.address)
         expect(await RelayerRegistry.torn()).to.equal(torn)
       })
 
