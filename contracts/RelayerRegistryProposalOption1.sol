@@ -23,17 +23,14 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
 
   RelayerRegistry public immutable registry;
 
-  address public immutable gasCompLogic;
   address public immutable newTornadoProxy;
   address public immutable staking;
 
   constructor(
-    address gasCompLogicAddress,
     address relayerRegistryAddress,
     address newTornadoProxyAddress,
     address stakingAddress
   ) public {
-    gasCompLogic = gasCompLogicAddress;
     registry = RelayerRegistry(relayerRegistryAddress);
     newTornadoProxy = newTornadoProxyAddress;
     staking = stakingAddress;
