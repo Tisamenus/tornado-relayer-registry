@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import { RegistryDataManager, PoolData, GlobalPoolData } from "./RegistryDataManager.sol";
 
 contract RelayerRegistryData {
-  address public immutable Governance;
+  address public immutable governance;
   RegistryDataManager public immutable DataManager;
 
   PoolData[] public getPoolDataForPoolId;
@@ -23,7 +23,7 @@ contract RelayerRegistryData {
     address[] memory initPoolDataAddresses
   ) public {
     DataManager = RegistryDataManager(dataManagerProxy);
-    Governance = tornadoGovernance;
+    governance = tornadoGovernance;
 
     for (uint256 i = 0; i < initPoolDataFees.length; i++) {
       getPoolDataForPoolId.push(PoolData(initPoolDataFees[i], initPoolDataAddresses[i]));
@@ -32,7 +32,7 @@ contract RelayerRegistryData {
   }
 
   modifier onlyGovernance() {
-    require(msg.sender == Governance);
+    require(msg.sender == governance);
     _;
   }
 
