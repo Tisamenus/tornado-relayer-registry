@@ -2,15 +2,15 @@ const { ethers, upgrades } = require('hardhat')
 const { expect } = require('chai')
 const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
-const { torn } = token_addresses
-const { namehash } = require('@ethersproject/hash')
-const { BigNumber } = require('@ethersproject/bignumber')
+const { torn, dai} = token_addresses
 
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
+  let tornadoTrees = mainnet.tornado_cash_addresses.trees
+  let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
 
   //// LIBRARIES
   let OracleHelperLibrary
@@ -28,6 +28,11 @@ describe('Data and Manager tests', () => {
 
   let StakingFactory
   let StakingContract
+
+  let TornadoInstances = []
+
+  let TornadoProxyFactory
+  let TornadoProxy
 
   //// IMPERSONATED ACCOUNTS
   let impGov
@@ -85,9 +90,28 @@ describe('Data and Manager tests', () => {
     RelayerRegistry = await RegistryFactory.deploy(
       RegistryData.address,
       governance,
-      torn,
       StakingContract.address,
     )
+
+    for(i = 0; i < tornadoPools.length; i++) {
+        const Instance = {
+          isERC20: (i > 3),
+          token: (i < 4) ? "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" : dai,
+          state: 1
+        }
+        const Tornado = {
+          addr: tornadoPools[i],
+          instance: Instance
+        }
+        TornadoInstances[i] = Tornado
+    }
+
+    TornadoProxyFactory = await ethers.getContractFactory("TornadoProxyRegistryUpgrade")
+    TornadoProxy = await TornadoProxyFactory.deploy(RelayerRegistry.address, tornadoTrees, governance, TornadoInstances)
+
+    ////////////// PROPOSAL OPTION 1
+    ProposalFactory = await ethers.getContractFactory("RelayerRegistryProposalOption1");
+    Proposal = await ProposalFactory.deploy(RelayerRegistry.address, tornadoProxy, TornadoProxy.address, StakingContract.address)
   })
 
   describe('Start of tests', () => {
@@ -128,7 +152,6 @@ describe('Data and Manager tests', () => {
     describe('Setup procedure RelayerRegistry', () => {
       it('Should have deployed Registry with proper data', async () => {
         expect(await RelayerRegistry.governance()).to.equal(governance)
-        expect(await RelayerRegistry.torn()).to.equal(torn)
       })
 
       it('Should set min stake amount to 100 TORN', async () => {
@@ -169,6 +192,8 @@ describe('Data and Manager tests', () => {
             erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('101')),
           ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('101'))
         }
+
+	console.log("Balance of whale after relayer funding: ", (await (await getToken(torn)).balanceOf(tornWhale.address)).toString())
       })
 
       it('Should succesfully register all relayers', async () => {

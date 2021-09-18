@@ -16,10 +16,10 @@ interface ITornadoStakingRewards {
 }
 
 contract GovernanceStakingUpgradeOption1 is GovernanceVaultUpgrade {
-  ITornadoStakingRewards public immutable staking;
+  ITornadoStakingRewards public immutable Staking;
 
   constructor(address stakingRewardsAddress, address userVaultAddress) public GovernanceVaultUpgrade(userVaultAddress) {
-    staking = ITornadoStakingRewards(stakingRewardsAddress);
+    Staking = ITornadoStakingRewards(stakingRewardsAddress);
   }
 
   function lock(
@@ -30,34 +30,34 @@ contract GovernanceStakingUpgradeOption1 is GovernanceVaultUpgrade {
     bytes32 r,
     bytes32 s
   ) external virtual override {
-    uint256 claimed = staking.governanceClaimFor(owner, address(userVault));
-    staking.setStakePoints(owner, lockedBalance[owner]);
+    uint256 claimed = Staking.governanceClaimFor(owner, address(userVault));
+    Staking.setStakePoints(owner, lockedBalance[owner]);
 
     torn.permit(owner, address(this), amount, deadline, v, r, s);
     _transferTokens(owner, amount);
 
     lockedBalance[owner] += claimed;
-    staking.setStakedAmountOnLock(amount.add(claimed));
+    Staking.setStakedAmountOnLock(amount.add(claimed));
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
-    uint256 claimed = staking.governanceClaimFor(msg.sender, address(userVault));
-    staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
+    uint256 claimed = Staking.governanceClaimFor(msg.sender, address(userVault));
+    Staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
 
     _transferTokens(msg.sender, amount);
 
     lockedBalance[msg.sender] += claimed;
-    staking.setStakedAmountOnLock(amount.add(claimed));
+    Staking.setStakedAmountOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
-    staking.governanceClaimFor(msg.sender, msg.sender);
-    staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
+    Staking.governanceClaimFor(msg.sender, msg.sender);
+    Staking.setStakePoints(msg.sender, lockedBalance[msg.sender]);
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
     userVault.withdrawTorn(msg.sender, amount);
 
-    staking.setStakedAmountOnUnlock(amount);
+    Staking.setStakedAmountOnUnlock(amount);
   }
 }

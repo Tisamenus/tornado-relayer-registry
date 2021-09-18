@@ -17,7 +17,7 @@ contract TornadoStakingRewards {
 
   address public immutable governance;
   uint256 public immutable ratioConstant;
-  IERC20 public immutable torn;
+  IERC20 public immutable TORN;
 
   uint256 public currentSharePrice;
   uint256 public distributionPeriod;
@@ -31,7 +31,7 @@ contract TornadoStakingRewards {
     uint256 initialStakedAmount
   ) public {
     governance = governanceAddress;
-    torn = IERC20(tornAddress);
+    TORN = IERC20(tornAddress);
     ratioConstant = IERC20(tornAddress).totalSupply();
     stakedAmount = initialStakedAmount;
   }
@@ -42,7 +42,7 @@ contract TornadoStakingRewards {
   }
 
   function addStake(address sender, uint256 tornAmount) external {
-    require(torn.transferFrom(sender, address(this), tornAmount), "tf_fail");
+    require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
     currentSharePrice = currentSharePrice.add(tornAmount.mul(ratioConstant).div(stakedAmount).div(distributionPeriod));
   }
 
@@ -80,7 +80,7 @@ contract TornadoStakingRewards {
 
   function _consumeStakePoints(address recipient, address staker) private returns (uint256 claimed) {
     claimed = uint256(getStakerDataForStaker[staker].stakePoints).mul(currentSharePrice).div(ratioConstant);
-    require(torn.transfer(recipient, claimed));
+    require(TORN.transfer(recipient, claimed));
     getStakerDataForStaker[staker].stakePoints = 0;
   }
 }

@@ -12,7 +12,7 @@ interface IRelayerRegistry {
 }
 
 contract TornadoProxyRegistryUpgrade is TornadoProxy {
-  IRelayerRegistry public immutable registry;
+  IRelayerRegistry public immutable Registry;
 
   constructor(
     address registryAddress,
@@ -20,7 +20,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     address governance,
     Tornado[] memory instances
   ) public TornadoProxy(tornadoTrees, governance, instances) {
-    registry = IRelayerRegistry(registryAddress);
+    Registry = IRelayerRegistry(registryAddress);
   }
 
   function withdraw(
@@ -33,7 +33,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     uint256 _fee,
     uint256 _refund
   ) external payable virtual override {
-    registry.burn(registry.getRelayerForAddress(_relayer), address(_tornado));
+    Registry.burn(Registry.getRelayerForAddress(_relayer), address(_tornado));
 
     Instance memory instance = instances[_tornado];
     require(instance.state != InstanceState.DISABLED, "The instance is not supported");

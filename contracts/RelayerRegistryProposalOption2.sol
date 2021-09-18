@@ -23,7 +23,7 @@ interface IChecker {
   function tornadoProxy() external view returns (address);
 }
 
-contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
+contract RelayerRegistryProposalOption2 is ImmutableGovernanceInformation {
   using SafeMath for uint256;
 
   address public constant GovernanceVesting = 0x179f48C78f57A3A78f0608cC9197B8972921d1D2;

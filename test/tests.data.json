@@ -2,7 +2,9 @@
   "mainnet": {
     "tornado_cash_addresses": {
       "governance": "0x5efda50f22d34F262c29268506C5Fa42cB56A1Ce",
-      "multisig": "0xb04E030140b30C27bcdfaafFFA98C57d80eDa7B4"
+      "multisig": "0xb04E030140b30C27bcdfaafFFA98C57d80eDa7B4",
+      "trees": "0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce",
+      "tornado_proxy": "0x722122dF12D4e14e13Ac3b6895a86e84145b6967"
     },
     "token_addresses": {
       "torn": "0x77777FeDdddFfC19Ff86DB637967013e6C6A116C",

@@ -15,6 +15,9 @@ import { GovernanceStakingUpgradeOption1 } from "./governance-upgrade/Governance
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
 
+import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+import { ITornadoInstance } from "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
+
 contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
   using SafeMath for uint256;
 
@@ -23,17 +26,20 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
 
   RelayerRegistry public immutable registry;
 
+  address public immutable oldTornadoProxy;
   address public immutable newTornadoProxy;
   address public immutable staking;
 
   constructor(
     address relayerRegistryAddress,
+    address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
     address stakingAddress
   ) public {
     registry = RelayerRegistry(relayerRegistryAddress);
     newTornadoProxy = newTornadoProxyAddress;
     staking = stakingAddress;
+    oldTornadoProxy = oldTornadoProxyAddress;
   }
 
   function executeProposal() external {

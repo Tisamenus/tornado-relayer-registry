@@ -22,8 +22,7 @@ contract RelayerRegistry is EnsResolve {
 
   address public immutable governance;
 
-  ITornadoStakingRewards public immutable staking;
-  IERC20 public immutable torn;
+  ITornadoStakingRewards public immutable Staking;
   RelayerRegistryData public immutable RegistryData;
 
   uint256 public minStakeAmount;
@@ -36,13 +35,11 @@ contract RelayerRegistry is EnsResolve {
   constructor(
     address registryDataAddress,
     address tornadoGovernance,
-    address tornAddress,
     address stakingAddress
   ) public {
     RegistryData = RelayerRegistryData(registryDataAddress);
     governance = tornadoGovernance;
-    torn = IERC20(tornAddress);
-    staking = ITornadoStakingRewards(stakingAddress);
+    Staking = ITornadoStakingRewards(stakingAddress);
   }
 
   modifier onlyGovernance() {
@@ -102,7 +99,7 @@ contract RelayerRegistry is EnsResolve {
   function stakeToRelayer(bytes32 relayer, uint256 stake) public {
     require(getMetadataForRelayer[relayer].isRegistered, "!registered");
     require(stake.add(getBalanceForRelayer[relayer]) >= minStakeAmount, "!min_stake");
-    staking.addStake(resolve(relayer), stake);
+    Staking.addStake(resolve(relayer), stake);
     getBalanceForRelayer[relayer] += stake;
   }
 }
