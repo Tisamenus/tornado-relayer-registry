@@ -50,15 +50,6 @@ contract TornadoStakingRewards {
     );
   }
 
-  function governanceClaimFor(
-    address recipient,
-    address vault,
-    uint256 amountLockedBeforehand
-  ) external onlyGovernance returns (uint256) {
-    _setStakePoints(recipient, amountLockedBeforehand);
-    return _consumeStakePoints(recipient, vault);
-  }
-
   function rebaseSharePriceOnLock(uint256 amount) external onlyGovernance {
     uint256 newStakedAmount = stakedAmount.add(amount);
     currentSharePrice = currentSharePrice.mul(stakedAmount).div(newStakedAmount);
@@ -74,6 +65,15 @@ contract TornadoStakingRewards {
   function setDistributionPeriod(uint256 period) external onlyGovernance {
     distributionPeriod = period;
     startTime = block.timestamp;
+  }
+
+  function governanceClaimFor(
+    address recipient,
+    address vault,
+    uint256 amountLockedBeforehand
+  ) external onlyGovernance returns (uint256) {
+    _setStakePoints(recipient, amountLockedBeforehand);
+    return _consumeStakePoints(recipient, vault);
   }
 
   function _setStakePoints(address staker, uint256 amountLockedBeforehand) private {

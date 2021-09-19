@@ -34,6 +34,8 @@ describe('Data and Manager tests', () => {
   let TornadoProxyFactory
   let TornadoProxy
 
+  let GovernanceContract
+
   //// IMPERSONATED ACCOUNTS
   let impGov
   let tornWhale
@@ -83,7 +85,7 @@ describe('Data and Manager tests', () => {
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
 
-    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther('20'))
+    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther('2000'))
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
@@ -109,6 +111,8 @@ describe('Data and Manager tests', () => {
       governance,
       TornadoInstances,
     )
+
+    GovernanceContract = await ethers.getContractAt("tornado-governance/contracts/Governance.sol:Governance", governance)
   })
 
   describe('Start of tests', () => {
@@ -138,7 +142,9 @@ describe('Data and Manager tests', () => {
           )
         }
       })
+    })
 
+    describe('Setup procedure StakingRewards', async () => {
       it('Should setup StakingRewards', async () => {
         const staking = await StakingContract.connect(impGov)
         await staking.setDistributionPeriod(6 * 3600)
@@ -156,10 +162,18 @@ describe('Data and Manager tests', () => {
         await relReg.setMinStakeAmount(ethers.utils.parseEther('100'))
         expect(await relReg.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
       })
+    })
 
+    describe('Setup procedure for accounts', async () => {
       it('Should successfully imitate a torn whale', async () => {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
         tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
+      })
+
+      it('Should successfully distribute torn to default accounts', async () => {
+	for(i = 0; i < 3; i++) {
+	  await expect(() => erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000'))).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
+	}
       })
     })
 
@@ -218,6 +232,18 @@ describe('Data and Manager tests', () => {
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
         }
+      })
+
+      it('Should rebase share price given random parameters', async () => {
+	const staking = await StakingContract.connect(impGov);
+
+	console.log((await StakingContract.currentSharePrice()).toString())
+	await staking.rebaseSharePriceOnLock(ethers.utils.parseEther('500'))
+	console.log((await StakingContract.currentSharePrice()).toString())
+	await staking.rebaseSharePriceOnLock(ethers.utils.parseEther('777'))
+	console.log((await StakingContract.currentSharePrice()).toString())
+	await staking.rebaseSharePriceOnLock(ethers.utils.parseEther('393'))
+	console.log((await StakingContract.currentSharePrice()).toString())
       })
     })
   })

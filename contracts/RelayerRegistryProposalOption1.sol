@@ -14,6 +14,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { GovernanceStakingUpgradeOption1 } from "./governance-upgrade/GovernanceStakingUpgradeOption1.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
+import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 import { ITornadoInstance } from "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
@@ -24,11 +25,11 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
   address public constant GovernanceVesting = 0x179f48C78f57A3A78f0608cC9197B8972921d1D2;
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
-  RelayerRegistry public immutable registry;
+  RelayerRegistry public immutable Registry;
+  TornadoStakingRewards public immutable Staking;
 
   address public immutable oldTornadoProxy;
   address public immutable newTornadoProxy;
-  address public immutable staking;
 
   constructor(
     address relayerRegistryAddress,
@@ -36,10 +37,10 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
     address newTornadoProxyAddress,
     address stakingAddress
   ) public {
-    registry = RelayerRegistry(relayerRegistryAddress);
+    Registry = RelayerRegistry(relayerRegistryAddress);
     newTornadoProxy = newTornadoProxyAddress;
-    staking = stakingAddress;
     oldTornadoProxy = oldTornadoProxyAddress;
+    Staking = TornadoStakingRewards(stakingAddress);
   }
 
   function executeProposal() external {
@@ -51,11 +52,20 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
 
     address vault = address(new TornadoVault());
 
-    LoopbackProxy(returnPayableGovernance()).upgradeTo(address(new GovernanceStakingUpgradeOption1(staking, vault)));
+    LoopbackProxy(returnPayableGovernance()).upgradeTo(address(new GovernanceStakingUpgradeOption1(address(Staking), vault)));
 
     GovernanceStakingUpgradeOption1 newGovernance = GovernanceStakingUpgradeOption1(GovernanceAddress);
 
-    registry.registerProxy(newTornadoProxy);
+    Registry.registerProxy(newTornadoProxy);
+
+    RelayerRegistryData RegistryData = Registry.RegistryData();
+
+    RegistryData.setProtocolFee(1e15);
+    RegistryData.setProtocolPeriod(5400);
+
+    Staking.setDistributionPeriod(365 days);
+
+    Registry.setMinStakeAmount(1e20);
 
     require(
       tornToken.transfer(

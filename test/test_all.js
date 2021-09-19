@@ -35,7 +35,6 @@ describe('Data and Manager tests', () => {
   let TornadoProxy
 
   //// IMPERSONATED ACCOUNTS
-  let impGov
   let tornWhale
 
   //// NORMAL ACCOUNTS
@@ -53,6 +52,11 @@ describe('Data and Manager tests', () => {
   let erc20Transfer = async (tokenAddress, senderWallet, recipientAddress, amount) => {
     const token = (await getToken(tokenAddress)).connect(senderWallet)
     return await token.transfer(recipientAddress, amount)
+  }
+
+  let minewait = async (time) => {
+    await ethers.provider.send('evm_increaseTime', [time])
+    await ethers.provider.send('evm_mine', [])
   }
 
   before(async () => {
@@ -83,7 +87,7 @@ describe('Data and Manager tests', () => {
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
 
-    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseEther('20'))
+    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseUnits('13893131191552333230524', "wei"))
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
@@ -121,17 +125,72 @@ describe('Data and Manager tests', () => {
   })
 
   describe('Start of tests', () => {
-    describe('Setup procedure Manager and RegistryData', () => {
-      it('Should impersonate governance properly', async () => {
-        await sendr('hardhat_impersonateAccount', [governance])
-        impGov = await ethers.getSigner(governance)
-        await sendr('hardhat_setBalance', [governance, '0xDE0B6B3A7640000'])
+    describe('Account setup procedure', async () => {
+      it('Should successfully imitate a torn whale', async () => {
+        await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
+        tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
       })
+    })
 
-      it('Should set RegistryData global params', async () => {
-        regData = await RegistryData.connect(impGov)
-        await regData.setProtocolPeriod(ethers.utils.parseUnits('1000', 'wei'))
-        await regData.setProtocolFee(ethers.utils.parseUnits('1000', 'szabo'))
+    describe('Proposal passing', async () => {
+      it('Should successfully pass the proposal', async () => {
+        const ProposalState = {
+          Pending: 0,
+          Active: 1,
+          Defeated: 2,
+          Timelocked: 3,
+          AwaitingExecution: 4,
+          Executed: 5,
+          Expired: 6,
+        }
+
+        let response, id, state
+
+	const gov = (await ethers.getContractAt("tornado-governance/contracts/Governance.sol:Governance", governance)).connect(tornWhale)
+
+	await (await (await getToken(torn)).connect(tornWhale)).approve(gov.address, ethers.utils.parseEther("1000000"))
+
+	await gov.lockWithApproval(ethers.utils.parseEther("40000"))
+
+	response = await gov.propose(Proposal.address, "Relayer Registry Proposal")
+	id = await gov.latestProposalIds(tornWhale.address)
+	state = await gov.state(id)
+
+        const { events } = await response.wait()
+        const args = events.find(({ event }) => event == 'ProposalCreated').args
+        expect(args.id).to.be.equal(id)
+        expect(args.proposer).to.be.equal(tornWhale.address)
+        expect(args.target).to.be.equal(Proposal.address)
+        expect(args.description).to.be.equal("Relayer Registry Proposal")
+        expect(state).to.be.equal(ProposalState.Pending)
+
+        await minewait((await gov.VOTING_DELAY()).add(1).toNumber())
+        await expect(gov.castVote(id, true)).to.not.be.reverted
+        state = await gov.state(id)
+        expect(state).to.be.equal(ProposalState.Active)
+        await minewait(
+          (
+            await gov.VOTING_PERIOD()
+          )
+            .add(await gov.EXECUTION_DELAY())
+            .add(96400)
+            .toNumber(),
+        )
+        state = await gov.state(id)
+	console.log(state)
+
+        await gov.execute(id)
+      })
+    })
+
+    describe('Check params for deployed contracts', () => {
+      it('Should assert params are correct', async () => {
+	const globalData = await RegistryData.protocolPoolData()
+	expect(globalData[0]).to.equal(ethers.utils.parseUnits("1000", "szabo"))
+	expect(globalData[1]).to.equal(ethers.utils.parseUnits("5400", "wei"))
+
+	expect(await TornadoStakingRewards.distributionPeriod()).to.equal(ethers.utils.parseUnits("86400", "wei").mul(BigNumber.from(365)))
+	expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther("20"))
       })
 
       it('Should pass initial fee update', async () => {
@@ -146,29 +205,6 @@ describe('Data and Manager tests', () => {
             `torn`,
           )
         }
-      })
-
-      it('Should setup StakingRewards', async () => {
-        const staking = await StakingContract.connect(impGov)
-        await staking.setDistributionPeriod(6 * 3600)
-        expect(await StakingContract.distributionPeriod()).to.equal(6 * 3600)
-      })
-    })
-
-    describe('Setup procedure RelayerRegistry', () => {
-      it('Should have deployed Registry with proper data', async () => {
-        expect(await RelayerRegistry.governance()).to.equal(governance)
-      })
-
-      it('Should set min stake amount to 100 TORN', async () => {
-        const relReg = await RelayerRegistry.connect(impGov)
-        await relReg.setMinStakeAmount(ethers.utils.parseEther('100'))
-        expect(await relReg.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
-      })
-
-      it('Should successfully imitate a torn whale', async () => {
-        await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
-        tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
       })
     })
 
