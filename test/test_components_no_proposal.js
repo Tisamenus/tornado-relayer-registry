@@ -109,15 +109,6 @@ describe('Data and Manager tests', () => {
       governance,
       TornadoInstances,
     )
-
-    ////////////// PROPOSAL OPTION 1
-    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposalOption1')
-    Proposal = await ProposalFactory.deploy(
-      RelayerRegistry.address,
-      tornadoProxy,
-      TornadoProxy.address,
-      StakingContract.address,
-    )
   })
 
   describe('Start of tests', () => {

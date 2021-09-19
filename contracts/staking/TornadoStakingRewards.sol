@@ -22,6 +22,7 @@ contract TornadoStakingRewards {
   uint256 public currentSharePrice;
   uint256 public distributionPeriod;
   uint256 public stakedAmount;
+  uint256 public startTime;
 
   mapping(address => TornadoStakerData) public getStakerDataForStaker;
 
@@ -43,31 +44,39 @@ contract TornadoStakingRewards {
 
   function addStake(address sender, uint256 tornAmount) external {
     require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
-    currentSharePrice = currentSharePrice.add(tornAmount.mul(ratioConstant).div(stakedAmount).div(distributionPeriod));
+    // will throw if block.timestamp - startTime > distributionPeriod
+    currentSharePrice = currentSharePrice.add(
+      tornAmount.mul(ratioConstant).div(stakedAmount).div(distributionPeriod.sub(block.timestamp.sub(startTime)))
+    );
   }
 
-  function claim() external returns (uint256) {
-    return _consumeStakePoints(msg.sender, msg.sender);
+  function governanceClaimFor(
+    address recipient,
+    address vault,
+    uint256 amountLockedBeforehand
+  ) external onlyGovernance returns (uint256) {
+    _setStakePoints(recipient, amountLockedBeforehand);
+    return _consumeStakePoints(recipient, vault);
   }
 
-  function governanceClaimFor(address recipient, address vault) external onlyGovernance returns (uint256 claimed) {
-    claimed = _consumeStakePoints(recipient, vault);
-    stakedAmount += claimed;
+  function rebaseSharePriceOnLock(uint256 amount) external onlyGovernance {
+    uint256 newStakedAmount = stakedAmount.add(amount);
+    currentSharePrice = currentSharePrice.mul(stakedAmount).div(newStakedAmount);
+    stakedAmount = newStakedAmount;
   }
 
-  function setStakedAmountOnLock(uint256 amount) external onlyGovernance {
-    stakedAmount = stakedAmount.add(amount);
-  }
-
-  function setStakedAmountOnUnlock(uint256 amount) external onlyGovernance {
-    stakedAmount = stakedAmount.sub(amount);
+  function rebaseSharePriceOnUnlock(uint256 amount) external onlyGovernance {
+    uint256 newStakedAmount = stakedAmount.sub(amount);
+    currentSharePrice = currentSharePrice.mul(stakedAmount).div(newStakedAmount);
+    stakedAmount = newStakedAmount;
   }
 
   function setDistributionPeriod(uint256 period) external onlyGovernance {
     distributionPeriod = period;
+    startTime = block.timestamp;
   }
 
-  function setStakePoints(address staker, uint256 amountLockedBeforehand) external onlyGovernance {
+  function _setStakePoints(address staker, uint256 amountLockedBeforehand) private {
     getStakerDataForStaker[staker] = TornadoStakerData(
       uint128(
         uint256(getStakerDataForStaker[staker].stakePoints).add(
