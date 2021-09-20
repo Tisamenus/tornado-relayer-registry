@@ -3,14 +3,20 @@ const { expect } = require('chai')
 const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
 const { torn, dai } = token_addresses
+const { BigNumber } = require('@ethersproject/bignumber')
 
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
+
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
+  let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
+  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
+
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
+
 
   //// LIBRARIES
   let OracleHelperLibrary
@@ -33,6 +39,8 @@ describe('Data and Manager tests', () => {
 
   let TornadoProxyFactory
   let TornadoProxy
+
+  let Governance
 
   //// IMPERSONATED ACCOUNTS
   let tornWhale
@@ -96,7 +104,7 @@ describe('Data and Manager tests', () => {
     for (i = 0; i < tornadoPools.length; i++) {
       const Instance = {
         isERC20: i > 3,
-        token: i < 4 ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : dai,
+        token: token_addresses[poolTokens[i]],
         state: 1,
       }
       const Tornado = {
@@ -122,6 +130,8 @@ describe('Data and Manager tests', () => {
       TornadoProxy.address,
       StakingContract.address,
     )
+
+    Governance = await ethers.getContractAt("GovernanceStakingUpgradeOption1", governance)
   })
 
   describe('Start of tests', () => {
@@ -129,6 +139,12 @@ describe('Data and Manager tests', () => {
       it('Should successfully imitate a torn whale', async () => {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
         tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
+      })
+
+      it('Should successfully distribute torn to default accounts', async () => {
+	for(i = 0; i < 3; i++) {
+	  await expect(() => erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000'))).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
+	}
       })
     })
 
@@ -150,7 +166,7 @@ describe('Data and Manager tests', () => {
 
 	await (await (await getToken(torn)).connect(tornWhale)).approve(gov.address, ethers.utils.parseEther("1000000"))
 
-	await gov.lockWithApproval(ethers.utils.parseEther("40000"))
+	await gov.lockWithApproval(ethers.utils.parseEther("26000"))
 
 	response = await gov.propose(Proposal.address, "Relayer Registry Proposal")
 	id = await gov.latestProposalIds(tornWhale.address)
@@ -189,17 +205,15 @@ describe('Data and Manager tests', () => {
 	expect(globalData[0]).to.equal(ethers.utils.parseUnits("1000", "szabo"))
 	expect(globalData[1]).to.equal(ethers.utils.parseUnits("5400", "wei"))
 
-	expect(await TornadoStakingRewards.distributionPeriod()).to.equal(ethers.utils.parseUnits("86400", "wei").mul(BigNumber.from(365)))
-	expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther("20"))
+	expect(await StakingContract.distributionPeriod()).to.equal(ethers.utils.parseUnits("86400", "wei").mul(BigNumber.from(365)))
+	expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther("100"))
       })
 
       it('Should pass initial fee update', async () => {
         await RegistryData.updateFees()
-        for (i = 0; i < 8; i++) {
-          const poolName = i <= 3 ? 'eth' : 'dai'
-          const constant = i <= 3 ? 0.1 : 100
+        for (i = 0; i < tornadoPools.length; i++) {
           console.log(
-            `${poolName}-${constant * 10 ** (i % 4)}-pool fee: `,
+            `${poolTokens[i]}-${denominations[i]}-pool fee: `,
             (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
               1000000,
             `torn`,
@@ -263,6 +277,27 @@ describe('Data and Manager tests', () => {
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
         }
+      })
+    })
+
+    describe('Test registry staking', async () => {
+      it("Accounts locking balances should cause rebase of share price", async () => {
+	const sharePrice = await StakingContract.currentSharePrice()
+	const k5 = ethers.utils.parseEther("5000")
+
+
+	let stakedAmount = await StakingContract.stakedAmount()
+	let newSharePrice = sharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
+
+	for(i = 0; i < 3; i++) {
+	  const TORN = await (await getToken(torn)).connect(signerArray[i])
+	  await TORN.approve(governance, ethers.utils.parseEther("200000000"))
+	  const gov = await Governance.connect(signerArray[i])
+	  await gov.lockWithApproval(k5);
+	  expect(await StakingContract.currentSharePrice()).to.be.equal(newSharePrice, k5.div(BigNumber.from(100)))
+	  stakedAmount = await StakingContract.stakedAmount()
+	  newSharePrice = newSharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
+	}
       })
     })
   })

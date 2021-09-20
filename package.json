@@ -9,7 +9,8 @@
     "prettier:check": "prettier --check . --config .prettierrc",
     "prettier:fix": "prettier --write . --config .prettierrc",
     "lint": "yarn eslint && yarn prettier:check",
-    "test": "yarn hardhat test"
+    "test:all": "yarn hardhat test",
+    "test": "yarn test:all test/test_all"
   },
   "repository": {
     "type": "git",

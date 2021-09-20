@@ -25,7 +25,7 @@ library UniswapV3OracleHelper {
     return
       OracleLibrary.getQuoteAtTick(
         OracleLibrary.consult(UniswapV3Factory.getPool(baseToken, quoteToken, fee), period),
-        uint128(10)**uint128(IERC20Decimals(baseToken).decimals()),
+        uint128(10)**uint128(IERC20Decimals(quoteToken).decimals()),
         baseToken,
         quoteToken
       );
