@@ -408,7 +408,7 @@ describe('Data and Manager tests', () => {
         let pevents = await mixer.queryFilter('Deposit')
         await initialize({ merkleTreeHeight: 20 })
 
-        const { proof, args } = await generateProof({
+        const result1 = await generateProof({
           deposit: depo,
           recipient: daiWhale.address,
 	  relayerAddress: relayers[0].address,
@@ -417,9 +417,19 @@ describe('Data and Manager tests', () => {
 
 	const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
 
-        await expect(proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.be.reverted;
+        await expect(proxyWithRelayer.withdraw(instance.address, result1.proof, ...result1.args)).to.be.reverted;
 
 	expect((await RelayerRegistry.getBalanceForRelayer(relayers[0].node))).to.equal(initialBalance)
+
+	const result2 = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+          events: pevents,
+        })
+
+        await expect(() =>
+          proxy.withdraw(instance.address, result2.proof, ...result2.args),
+        ).to.changeTokenBalance(daiToken, daiWhale, await instance.denomination())
       })
     })
   })
