@@ -11,6 +11,8 @@ interface IRelayerRegistry {
   function getRelayerForAddress(address relayer) external returns (bytes32);
 }
 
+import "hardhat/console.sol";
+
 contract TornadoProxyRegistryUpgrade is TornadoProxy {
   IRelayerRegistry public immutable Registry;
 

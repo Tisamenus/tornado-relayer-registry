@@ -350,6 +350,8 @@ describe('Data and Manager tests', () => {
 	const daiToken = (await (await getToken(dai)).connect(daiWhale));
 	const instanceAddress = tornadoPools[6]
 
+	const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+
 	const instance = await ethers.getContractAt("tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance", instanceAddress)
 	const proxy = await TornadoProxy.connect(daiWhale)
 	const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
@@ -379,6 +381,45 @@ describe('Data and Manager tests', () => {
         await expect(() =>
           proxyWithRelayer.withdraw(instance.address, proof, ...args),
         ).to.changeTokenBalance(daiToken, daiWhale, await instance.denomination())
+
+	expect((await RelayerRegistry.getBalanceForRelayer(relayers[0].node))).to.be.lt(initialBalance)
+      })
+
+      it('This time around relayer should not have enough funds for withdrawal', async () => {
+	const daiToken = (await (await getToken(dai)).connect(daiWhale));
+	const instanceAddress = tornadoPools[6]
+
+	const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+
+	const instance = await ethers.getContractAt("tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance", instanceAddress)
+	const proxy = await TornadoProxy.connect(daiWhale)
+	const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+
+	await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther("1000000"))
+
+        const depo = createDeposit({
+          nullifier: rbigint(31),
+          secret: rbigint(31),
+        })
+        const note = toHex(depo.preimage, 62)
+
+	await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(daiToken, daiWhale, BigNumber.from(0).sub(await instance.denomination()))
+
+        let pevents = await mixer.queryFilter('Deposit')
+        await initialize({ merkleTreeHeight: 20 })
+
+        const { proof, args } = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+	  relayerAddress: relayers[0].address,
+          events: pevents,
+        })
+
+	const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+
+        await expect(proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.be.reverted;
+
+	expect((await RelayerRegistry.getBalanceForRelayer(relayers[0].node))).to.equal(initialBalance)
       })
     })
   })
