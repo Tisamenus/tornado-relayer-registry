@@ -15,9 +15,9 @@ import { GovernanceStakingUpgradeOption1 } from "./governance-upgrade/Governance
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
+import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
-import { ITornadoInstance } from "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
 
 contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
   using SafeMath for uint256;
@@ -27,6 +27,7 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
 
   RelayerRegistry public immutable Registry;
   TornadoStakingRewards public immutable Staking;
+  TornadoInstancesData public immutable InstancesData;
 
   address public immutable oldTornadoProxy;
   address public immutable newTornadoProxy;
@@ -35,12 +36,14 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
     address relayerRegistryAddress,
     address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
-    address stakingAddress
+    address stakingAddress,
+    address tornadoInstancesDataAddress
   ) public {
     Registry = RelayerRegistry(relayerRegistryAddress);
     newTornadoProxy = newTornadoProxyAddress;
     oldTornadoProxy = oldTornadoProxyAddress;
     Staking = TornadoStakingRewards(stakingAddress);
+    InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
   }
 
   function executeProposal() external {
@@ -67,6 +70,8 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
 
     Registry.setMinStakeAmount(1e20);
 
+    require(disableOldProxy());
+
     require(
       tornToken.transfer(
         address(newGovernance.userVault()),
@@ -74,5 +79,16 @@ contract RelayerRegistryProposalOption1 is ImmutableGovernanceInformation {
       ),
       "TORN: transfer failed"
     );
+  }
+
+  function disableOldProxy() private returns (bool) {
+    TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
+    TornadoProxy.Tornado[] memory Instances = InstancesData.getInstances();
+
+    for(uint256 i = 0; i < Instances.length; i++) {
+      oldProxy.updateInstance(Instances[i]);
+    }
+
+    return true;
   }
 }
