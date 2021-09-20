@@ -68,12 +68,12 @@ contract TornadoStakingRewards {
   }
 
   function governanceClaimFor(
+    address staker,
     address recipient,
-    address vault,
     uint256 amountLockedBeforehand
   ) external onlyGovernance returns (uint256) {
-    _setStakePoints(recipient, amountLockedBeforehand);
-    return _consumeStakePoints(recipient, vault);
+    _setStakePoints(staker, amountLockedBeforehand);
+    return _consumeStakePoints(staker, recipient);
   }
 
   function _setStakePoints(address staker, uint256 amountLockedBeforehand) private {
@@ -87,7 +87,7 @@ contract TornadoStakingRewards {
     );
   }
 
-  function _consumeStakePoints(address recipient, address staker) private returns (uint256 claimed) {
+  function _consumeStakePoints(address staker, address recipient) private returns (uint256 claimed) {
     claimed = uint256(getStakerDataForStaker[staker].stakePoints).mul(currentSharePrice).div(ratioConstant);
     require(TORN.transfer(recipient, claimed));
     getStakerDataForStaker[staker].stakePoints = 0;

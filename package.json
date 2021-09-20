@@ -35,6 +35,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.6",
     "tornado-anonymity-mining": "^2.1.4",
+    "tornado-cli": "^0.0.1",
     "tornado-governance": "^1.0.1"
   },
   "devDependencies": {

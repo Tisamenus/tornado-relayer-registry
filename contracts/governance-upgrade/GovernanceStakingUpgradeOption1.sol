@@ -7,8 +7,8 @@ import { GovernanceVaultUpgrade } from "../../submodules/tornado-lottery-period/
 
 interface ITornadoStakingRewards {
   function governanceClaimFor(
+    address staker,
     address recipient,
-    address vault,
     uint256 amountLockedBeforehand
   ) external returns (uint256);
 
