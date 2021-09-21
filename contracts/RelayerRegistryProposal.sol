@@ -50,6 +50,12 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   }
 
   function executeProposal() external {
+    /**
+    The below variable holds the total amount of TORN outflows from all of the proposal executions,
+    which will be used to calculate the proper amount of TORN for transfer to Governance.
+    For an explanation as to how this variable has been calculated with these fix values, please look at:
+    https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/scripts/balance_estimation.md
+    */
     uint256 totalOutflowsOfProposalExecutions = 120000000000000000000000 + 22916666666666666666666 + 54999999999999969408000 - 27e18;
 
     uint256 lockedTokenBalancesInGovernance = IGovernanceVesting(GovernanceVesting).released().sub(
@@ -82,6 +88,16 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       ),
       "TORN: transfer failed"
     );
+
+
+    TornadoAuctionHandler auctionHandler = new TornadoAuctionHandler();
+    tornToken.transfer(address(auctionHandler), 100e18);
+
+    /**
+    As with above, please see:
+    https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/contracts/auction/Auction.md
+    */
+    auctionHandler.initializeAuction(block.timestamp + 5 days, 100 ether, 151e16, 1 ether, 0);
   }
 
   function disableOldProxy() private returns (bool) {
