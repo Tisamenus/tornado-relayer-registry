@@ -56,7 +56,10 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     For an explanation as to how this variable has been calculated with these fix values, please look at:
     https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/scripts/balance_estimation.md
     */
-    uint256 totalOutflowsOfProposalExecutions = 120000000000000000000000 + 22916666666666666666666 + 54999999999999969408000 - 27e18;
+    uint256 totalOutflowsOfProposalExecutions = 120000000000000000000000 +
+      22916666666666666666666 +
+      54999999999999969408000 -
+      27e18;
 
     uint256 lockedTokenBalancesInGovernance = IGovernanceVesting(GovernanceVesting).released().sub(
       totalOutflowsOfProposalExecutions
@@ -64,7 +67,9 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     address vault = address(new TornadoVault());
 
-    LoopbackProxy(returnPayableGovernance()).upgradeTo(address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, vault)));
+    LoopbackProxy(returnPayableGovernance()).upgradeTo(
+      address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, vault))
+    );
 
     GovernanceStakingUpgrade newGovernance = GovernanceStakingUpgrade(returnPayableGovernance());
 
@@ -89,7 +94,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       "TORN: transfer failed"
     );
 
-
     TornadoAuctionHandler auctionHandler = new TornadoAuctionHandler();
     tornToken.transfer(address(auctionHandler), 100e18);
 
@@ -104,7 +108,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
     TornadoProxy.Tornado[] memory Instances = InstancesData.getInstances();
 
-    for(uint256 i = 0; i < Instances.length; i++) {
+    for (uint256 i = 0; i < Instances.length; i++) {
       oldProxy.updateInstance(Instances[i]);
     }
 

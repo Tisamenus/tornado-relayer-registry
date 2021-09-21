@@ -22,7 +22,11 @@ interface ITornadoStakingRewards {
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
 
-  constructor(address stakingRewardsAddress, address gasCompLogic, address userVaultAddress) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
+  constructor(
+    address stakingRewardsAddress,
+    address gasCompLogic,
+    address userVaultAddress
+  ) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
   }
 

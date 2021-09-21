@@ -19,7 +19,6 @@ describe('Data and Manager tests', () => {
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
 
-
   //// LIBRARIES
   let OracleHelperLibrary
   let OracleHelperFactory
@@ -49,6 +48,9 @@ describe('Data and Manager tests', () => {
 
   let GasCompensationFactory
   let GasCompensation
+
+  let Proposal
+  let ProposalFactory
 
   //// IMPERSONATED ACCOUNTS
   let tornWhale
@@ -81,7 +83,7 @@ describe('Data and Manager tests', () => {
     return (await ethers.provider.getBlock('latest')).timestamp
   }
 
-  before(async () => {
+  before(async function () {
     signerArray = await ethers.getSigners()
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
@@ -109,13 +111,17 @@ describe('Data and Manager tests', () => {
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
 
-    StakingContract = await StakingFactory.deploy(governance, torn, ethers.utils.parseUnits('13893131191552333230524', "wei"))
+    StakingContract = await StakingFactory.deploy(
+      governance,
+      torn,
+      ethers.utils.parseUnits('13893131191552333230524', 'wei'),
+    )
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
     RelayerRegistry = await RegistryFactory.deploy(RegistryData.address, governance, StakingContract.address)
 
-    for (i = 0; i < tornadoPools.length; i++) {
+    for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
         isERC20: i > 3,
         token: token_addresses[poolTokens[i]],
@@ -136,14 +142,14 @@ describe('Data and Manager tests', () => {
       TornadoInstances,
     )
 
-    for(i = 0; i < TornadoInstances.length; i++) {
-      TornadoInstances[i].instance.state = 0;
+    for (let i = 0; i < TornadoInstances.length; i++) {
+      TornadoInstances[i].instance.state = 0
     }
 
-    InstancesDataFactory = await ethers.getContractFactory("TornadoInstancesData")
+    InstancesDataFactory = await ethers.getContractFactory('TornadoInstancesData')
     InstancesData = await InstancesDataFactory.deploy(TornadoInstances)
 
-    GasCompensationFactory = await ethers.getContractFactory("GasCompensationVault")
+    GasCompensationFactory = await ethers.getContractFactory('GasCompensationVault')
     GasCompensation = await GasCompensationFactory.deploy()
 
     ////////////// PROPOSAL OPTION 1
@@ -154,33 +160,35 @@ describe('Data and Manager tests', () => {
       TornadoProxy.address,
       StakingContract.address,
       InstancesData.address,
-      GasCompensation.address
+      GasCompensation.address,
     )
 
-    Governance = await ethers.getContractAt("GovernanceStakingUpgrade", governance)
+    Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)
   })
 
   describe('Start of tests', () => {
-    describe('Account setup procedure', async () => {
-      it('Should successfully imitate a torn whale', async () => {
+    describe('Account setup procedure', () => {
+      it('Should successfully imitate a torn whale', async function () {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
         tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
       })
 
-      it('Should successfully distribute torn to default accounts', async () => {
-	for(i = 0; i < 3; i++) {
-	  await expect(() => erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000'))).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
-	}
+      it('Should successfully distribute torn to default accounts', async function () {
+        for (let i = 0; i < 3; i++) {
+          await expect(() =>
+            erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000')),
+          ).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
+        }
       })
 
-      it('Should successfully imitate a dai whale', async () => {
-	await sendr('hardhat_impersonateAccount', ['0x3890Fc235526C4e0691E042151c7a3a2d7b636D7'])
-	daiWhale = await ethers.getSigner('0x3890Fc235526C4e0691E042151c7a3a2d7b636D7')
-	await signerArray[0].sendTransaction({to: daiWhale.address, value: ethers.utils.parseEther("1")})
+      it('Should successfully imitate a dai whale', async function () {
+        await sendr('hardhat_impersonateAccount', ['0x3890Fc235526C4e0691E042151c7a3a2d7b636D7'])
+        daiWhale = await ethers.getSigner('0x3890Fc235526C4e0691E042151c7a3a2d7b636D7')
+        await signerArray[0].sendTransaction({ to: daiWhale.address, value: ethers.utils.parseEther('1') })
       })
     })
 
-    describe('Proposal passing', async () => {
+    describe('Proposal passing', () => {
       it('Should successfully pass the proposal', async () => {
         const ProposalState = {
           Pending: 0,
@@ -194,22 +202,26 @@ describe('Data and Manager tests', () => {
 
         let response, id, state
 
-	const gov = (await ethers.getContractAt("tornado-governance/contracts/Governance.sol:Governance", governance)).connect(tornWhale)
+        const gov = (
+          await ethers.getContractAt('tornado-governance/contracts/Governance.sol:Governance', governance)
+        ).connect(tornWhale)
 
-	await (await (await getToken(torn)).connect(tornWhale)).approve(gov.address, ethers.utils.parseEther("1000000"))
+        await (
+          await (await getToken(torn)).connect(tornWhale)
+        ).approve(gov.address, ethers.utils.parseEther('1000000'))
 
-	await gov.lockWithApproval(ethers.utils.parseEther("26000"))
+        await gov.lockWithApproval(ethers.utils.parseEther('26000'))
 
-	response = await gov.propose(Proposal.address, "Relayer Registry Proposal")
-	id = await gov.latestProposalIds(tornWhale.address)
-	state = await gov.state(id)
+        response = await gov.propose(Proposal.address, 'Relayer Registry Proposal')
+        id = await gov.latestProposalIds(tornWhale.address)
+        state = await gov.state(id)
 
         const { events } = await response.wait()
         const args = events.find(({ event }) => event == 'ProposalCreated').args
         expect(args.id).to.be.equal(id)
         expect(args.proposer).to.be.equal(tornWhale.address)
         expect(args.target).to.be.equal(Proposal.address)
-        expect(args.description).to.be.equal("Relayer Registry Proposal")
+        expect(args.description).to.be.equal('Relayer Registry Proposal')
         expect(state).to.be.equal(ProposalState.Pending)
 
         await minewait((await gov.VOTING_DELAY()).add(1).toNumber())
@@ -225,38 +237,40 @@ describe('Data and Manager tests', () => {
             .toNumber(),
         )
         state = await gov.state(id)
-	console.log(state)
+        console.log(state)
 
         await gov.execute(id)
       })
     })
 
     describe('Check params for deployed contracts', () => {
-      it('Should assert params are correct', async () => {
-	const globalData = await RegistryData.protocolPoolData()
-	expect(globalData[0]).to.equal(ethers.utils.parseUnits("1000", "szabo"))
-	expect(globalData[1]).to.equal(ethers.utils.parseUnits("5400", "wei"))
+      it('Should assert params are correct', async function () {
+        const globalData = await RegistryData.protocolPoolData()
+        expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
+        expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
-	expect(await StakingContract.distributionPeriod()).to.equal(ethers.utils.parseUnits("86400", "wei").mul(BigNumber.from(365)))
-	expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther("100"))
+        expect(await StakingContract.distributionPeriod()).to.equal(
+          ethers.utils.parseUnits('86400', 'wei').mul(BigNumber.from(365)),
+        )
+        expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
       })
 
       it('Should pass initial fee update', async () => {
         await RegistryData.updateFees()
-        for (i = 0; i < tornadoPools.length; i++) {
+        for (let i = 0; i < tornadoPools.length; i++) {
           console.log(
             `${poolTokens[i]}-${denominations[i]}-pool fee: `,
             (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
               1000000,
-            `torn`,
+            'torn',
           )
         }
       })
     })
 
     describe('Test registry registration', () => {
-      it('Should successfully prepare a couple of relayer wallets', async () => {
-        for (i = 0; i < 4; i++) {
+      it('Should successfully prepare a couple of relayer wallets', async function () {
+        for (let i = 0; i < 4; i++) {
           const name = mainnet.project_specific.mocking.relayer_data[i][0]
           const address = mainnet.project_specific.mocking.relayer_data[i][1]
           const node = mainnet.project_specific.mocking.relayer_data[i][2]
@@ -285,10 +299,10 @@ describe('Data and Manager tests', () => {
         )
       })
 
-      it('Should succesfully register all relayers', async () => {
+      it('Should succesfully register all relayers', async function () {
         const metadata = { isRegistered: true, fee: ethers.utils.parseEther('0.1') }
 
-        for (i = 0; i < 4; i++) {
+        for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
             .connect(relayers[i].wallet)
             .approve(StakingContract.address, ethers.utils.parseEther('300'))
@@ -310,79 +324,84 @@ describe('Data and Manager tests', () => {
       })
     })
 
-    describe('Test registry staking', async () => {
-      it("Accounts locking balances should cause rebase of share price", async () => {
-	const sharePrice = await StakingContract.currentSharePrice()
-	const k5 = ethers.utils.parseEther("5000")
+    describe('Test registry staking', () => {
+      it('Accounts locking balances should cause rebase of share price', async function () {
+        const sharePrice = await StakingContract.currentSharePrice()
+        const k5 = ethers.utils.parseEther('5000')
 
+        let stakedAmount = await StakingContract.stakedAmount()
+        let newSharePrice = sharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
 
-	let stakedAmount = await StakingContract.stakedAmount()
-	let newSharePrice = sharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
-
-	for(i = 0; i < 3; i++) {
-	  const TORN = await (await getToken(torn)).connect(signerArray[i])
-	  await TORN.approve(governance, ethers.utils.parseEther("200000000"))
-	  const gov = await Governance.connect(signerArray[i])
-	  await gov.lockWithApproval(k5);
-	  expect(await StakingContract.currentSharePrice()).to.be.equal(newSharePrice)
-	  stakedAmount = await StakingContract.stakedAmount()
-	  newSharePrice = newSharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
-	}
+        for (let i = 0; i < 3; i++) {
+          const TORN = await (await getToken(torn)).connect(signerArray[i])
+          await TORN.approve(governance, ethers.utils.parseEther('200000000'))
+          const gov = await Governance.connect(signerArray[i])
+          await gov.lockWithApproval(k5)
+          expect(await StakingContract.currentSharePrice()).to.be.equal(newSharePrice)
+          stakedAmount = await StakingContract.stakedAmount()
+          newSharePrice = newSharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
+        }
       })
 
-      it("Should properly harvest rewards if someone calls lockWithApproval(0)", async () => {
-	const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString();
+      it('Should properly harvest rewards if someone calls lockWithApproval(0)', async function () {
+        const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString()
 
-	const gov = await Governance.connect(signerArray[2])
+        const gov = await Governance.connect(signerArray[2])
 
-	console.log("Timestamp: ", await timestamp())
+        console.log('Timestamp: ', await timestamp())
 
-	await minewait(86400*3);
+        await minewait(86400 * 3)
 
-	console.log("Timestamp: ", await timestamp())
+        console.log('Timestamp: ', await timestamp())
 
-	await gov.lockWithApproval(0)
+        await gov.lockWithApproval(0)
 
-	expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance)
+        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance)
       })
 
-      it("Should properly harvest rewards if someone calls unlock", async () => {
-	const initialBalance = (await Governance.lockedBalance(signerArray[1].address)).toString();
+      it('Should properly harvest rewards if someone calls unlock', async function () {
+        const initialBalance = (await Governance.lockedBalance(signerArray[1].address)).toString()
 
-	const gov = await Governance.connect(signerArray[1])
+        const gov = await Governance.connect(signerArray[1])
 
-	console.log("Timestamp: ", await timestamp())
+        console.log('Timestamp: ', await timestamp())
 
-	await minewait(86400*3);
+        await minewait(86400 * 3)
 
-	console.log("Timestamp: ", await timestamp())
+        console.log('Timestamp: ', await timestamp())
 
-	await gov.unlock(initialBalance)
+        await gov.unlock(initialBalance)
 
-	expect(await Governance.lockedBalance(signerArray[1].address)).to.equal(0)
+        expect(await Governance.lockedBalance(signerArray[1].address)).to.equal(0)
       })
     })
 
-    describe('Test depositing and withdrawing into an instance over new proxy', async () => {
-      it('Should succesfully deposit and withdraw from / into an instance', async () => {
-	const daiToken = (await (await getToken(dai)).connect(daiWhale));
-	const instanceAddress = tornadoPools[6]
+    describe('Test depositing and withdrawing into an instance over new proxy', () => {
+      it('Should succesfully deposit and withdraw from / into an instance', async function () {
+        const daiToken = await (await getToken(dai)).connect(daiWhale)
+        const instanceAddress = tornadoPools[6]
 
-	const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+        const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
 
-	const instance = await ethers.getContractAt("tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance", instanceAddress)
-	const proxy = await TornadoProxy.connect(daiWhale)
-	const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+        const instance = await ethers.getContractAt(
+          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
+          instanceAddress,
+        )
+        const proxy = await TornadoProxy.connect(daiWhale)
+        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
 
-	await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther("1000000"))
+        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
 
         const depo = createDeposit({
           nullifier: rbigint(31),
           secret: rbigint(31),
         })
-        const note = toHex(depo.preimage, 62)
 
-	await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(daiToken, daiWhale, BigNumber.from(0).sub(await instance.denomination()))
+        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          BigNumber.from(0).sub(await instance.denomination()),
+        )
 
         let pevents = await mixer.queryFilter('Deposit')
         await initialize({ merkleTreeHeight: 20 })
@@ -390,38 +409,46 @@ describe('Data and Manager tests', () => {
         const { proof, args } = await generateProof({
           deposit: depo,
           recipient: daiWhale.address,
-	  relayerAddress: relayers[0].address,
+          relayerAddress: relayers[0].address,
           events: pevents,
         })
 
-	const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
 
-        await expect(() =>
-          proxyWithRelayer.withdraw(instance.address, proof, ...args),
-        ).to.changeTokenBalance(daiToken, daiWhale, await instance.denomination())
+        await expect(() => proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          await instance.denomination(),
+        )
 
-	expect((await RelayerRegistry.getBalanceForRelayer(relayers[0].node))).to.be.lt(initialBalance)
+        expect(await RelayerRegistry.getBalanceForRelayer(relayers[0].node)).to.be.lt(initialBalance)
       })
 
-      it('This time around relayer should not have enough funds for withdrawal', async () => {
-	const daiToken = (await (await getToken(dai)).connect(daiWhale));
-	const instanceAddress = tornadoPools[6]
+      it('This time around relayer should not have enough funds for withdrawal', async function () {
+        const daiToken = await (await getToken(dai)).connect(daiWhale)
+        const instanceAddress = tornadoPools[6]
 
-	const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+        const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
 
-	const instance = await ethers.getContractAt("tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance", instanceAddress)
-	const proxy = await TornadoProxy.connect(daiWhale)
-	const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+        const instance = await ethers.getContractAt(
+          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
+          instanceAddress,
+        )
+        const proxy = await TornadoProxy.connect(daiWhale)
+        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
 
-	await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther("1000000"))
+        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
 
         const depo = createDeposit({
           nullifier: rbigint(31),
           secret: rbigint(31),
         })
-        const note = toHex(depo.preimage, 62)
 
-	await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(daiToken, daiWhale, BigNumber.from(0).sub(await instance.denomination()))
+        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          BigNumber.from(0).sub(await instance.denomination()),
+        )
 
         let pevents = await mixer.queryFilter('Deposit')
         await initialize({ merkleTreeHeight: 20 })
@@ -429,17 +456,18 @@ describe('Data and Manager tests', () => {
         const result1 = await generateProof({
           deposit: depo,
           recipient: daiWhale.address,
-	  relayerAddress: relayers[0].address,
+          relayerAddress: relayers[0].address,
           events: pevents,
         })
 
-	const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
 
-        await expect(proxyWithRelayer.withdraw(instance.address, result1.proof, ...result1.args)).to.be.reverted;
+        await expect(proxyWithRelayer.withdraw(instance.address, result1.proof, ...result1.args)).to.be
+          .reverted
 
-	expect((await RelayerRegistry.getBalanceForRelayer(relayers[0].node))).to.equal(initialBalance)
+        expect(await RelayerRegistry.getBalanceForRelayer(relayers[0].node)).to.equal(initialBalance)
 
-	const result2 = await generateProof({
+        const result2 = await generateProof({
           deposit: depo,
           recipient: daiWhale.address,
           events: pevents,

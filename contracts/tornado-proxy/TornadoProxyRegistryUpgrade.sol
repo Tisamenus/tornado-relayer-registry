@@ -33,7 +33,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     uint256 _fee,
     uint256 _refund
   ) external payable virtual override {
-    if(_relayer != address(0)) Registry.burn(Registry.getRelayerForAddress(_relayer), address(_tornado));
+    if (_relayer != address(0)) Registry.burn(Registry.getRelayerForAddress(_relayer), address(_tornado));
 
     Instance memory instance = instances[_tornado];
     require(instance.state != InstanceState.DISABLED, "The instance is not supported");

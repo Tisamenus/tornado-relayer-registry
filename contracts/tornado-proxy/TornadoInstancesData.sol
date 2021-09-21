@@ -9,7 +9,7 @@ contract TornadoInstancesData {
   TornadoProxy.Tornado[] public Instances;
 
   constructor(TornadoProxy.Tornado[] memory instancesArray) public {
-    for(uint256 i = 0; i < instancesArray.length; i++) {
+    for (uint256 i = 0; i < instancesArray.length; i++) {
       Instances.push(instancesArray[i]);
     }
   }
