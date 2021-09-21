@@ -58,12 +58,12 @@ module.exports = {
       timeout: 120000,
     },
     mainnet: {
-      url: `${process.env.mainnet_rpc}`,
+      url: `https://mainnet.infura.io/v3/${process.env.mainnet_rpc_key}`,
       accounts: [`${process.env.mainnet_account_pk}`],
       timeout: 2147483647,
     },
     goerli: {
-      url: `${process.env.goerli_rpc}`,
+      url: `https://goerli.infura.io/v3/${process.env.goerli_rpc_key}`,
       accounts: [`${process.env.goerli_account_pk}`],
       timeout: 2147483647,
     },
