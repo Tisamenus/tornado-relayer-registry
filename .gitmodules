@@ -1,4 +1,4 @@
-[submodule "submodules/tornado-lottery-period"]
-	path = submodules/tornado-lottery-period
+[submodule "tornado-lottery-period"]
+	path = tornado-lottery-period
 	url = https://github.com/h-ivor/tornado-lottery-period
 	branch = only-vault-and-gas
