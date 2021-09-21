@@ -1,14 +1,16 @@
-# Peppersec project template [![Build Status](https://github.com/peppersec/project-template/workflows/build/badge.svg)](https://github.com/peppersec/project-template/actions)
+# Tornado Relayer Registry [![Build Status](https://img.shields.io/github/workflow/status/h-ivor/tornado-relayer-registry/build)](https://github.com/h-ivor/tornado-relayer-registry/actions)
 
-## Dependencies
+Repository for a governance upgrade which includes:
 
-1. node 14
-2. yarn
+- A new Torn staking mechanism.
+- Vault to hold user funds.
+- Gas compensation mechanism for functions.
 
-## Start
+## Setup
 
 ```bash
-$ yarn
-$ cp .env.example .env
-$ yarn start
+git clone --recurse-submodules https://github.com/h-ivor/tornado-relayer-registry.git
+cd tornado-relayer-registry
+cp .env.example .env
+yarn test
 ```
