@@ -3,7 +3,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { GovernanceVaultUpgrade } from "../../submodules/tornado-lottery-period/contracts/vault/GovernanceVaultUpgrade.sol";
+import { GovernanceGasUpgrade } from "../../submodules/tornado-lottery-period/contracts/gas/GovernanceGasUpgrade.sol";
 
 interface ITornadoStakingRewards {
   function governanceClaimFor(
@@ -19,10 +19,10 @@ interface ITornadoStakingRewards {
   function rebaseSharePriceOnUnlock(uint256 amount) external;
 }
 
-contract GovernanceStakingUpgradeOption1 is GovernanceVaultUpgrade {
+contract GovernanceStakingUpgradeOption1 is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
 
-  constructor(address stakingRewardsAddress, address userVaultAddress) public GovernanceVaultUpgrade(userVaultAddress) {
+  constructor(address stakingRewardsAddress, address gasCompLogic, address userVaultAddress) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
   }
 
