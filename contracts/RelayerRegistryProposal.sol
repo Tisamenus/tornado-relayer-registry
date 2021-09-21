@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import { ImmutableGovernanceInformation } from "../submodules/tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
 import { TornadoVault } from "../submodules/tornado-lottery-period/contracts/vault/TornadoVault.sol";
 import { IGovernanceVesting } from "../submodules/tornado-lottery-period/contracts/interfaces/IGovernanceVesting.sol";
+import { TornadoAuctionHandler } from "../submodules/tornado-lottery-period/contracts/auction/TornadoAuctionHandler.sol";
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { LoopbackProxy } from "tornado-governance/contracts/LoopbackProxy.sol";
@@ -94,14 +95,16 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       "TORN: transfer failed"
     );
 
+    uint256 amountOfTornToAuctionOff = 100 ether;
+
     TornadoAuctionHandler auctionHandler = new TornadoAuctionHandler();
-    tornToken.transfer(address(auctionHandler), 100e18);
+    tornToken.transfer(address(auctionHandler), amountOfTornToAuctionOff);
 
     /**
     As with above, please see:
     https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/contracts/auction/Auction.md
     */
-    auctionHandler.initializeAuction(block.timestamp + 5 days, 100 ether, 151e16, 1 ether, 0);
+    auctionHandler.initializeAuction(block.timestamp + 5 days, amountOfTornToAuctionOff, 151e16, 1 ether, 0);
   }
 
   function disableOldProxy() private returns (bool) {
