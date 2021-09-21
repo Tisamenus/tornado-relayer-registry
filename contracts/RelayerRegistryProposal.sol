@@ -104,7 +104,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     As with above, please see:
     https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/contracts/auction/Auction.md
     */
-    auctionHandler.initializeAuction(block.timestamp + 5 days, amountOfTornToAuctionOff, 151e16, 1 ether, 0);
+    auctionHandler.initializeAuction(block.timestamp + 5 days, uint96(amountOfTornToAuctionOff), 151e16, 1 ether, 0);
   }
 
   function disableOldProxy() private returns (bool) {
