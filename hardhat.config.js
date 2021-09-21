@@ -46,7 +46,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.mainnet_rpc,
+        url: `${process.env.mainnet_rpc}`,
         //        blockNumber: 13211966,
       },
       initialBaseFeePerGas: 5,
@@ -58,13 +58,13 @@ module.exports = {
       timeout: 120000,
     },
     mainnet: {
-      url: process.env.mainnet_rpc,
-      accounts: [process.env.mainnet_account_pk],
+      url: `${process.env.mainnet_rpc}`,
+      accounts: [`${process.env.mainnet_account_pk}`],
       timeout: 2147483647,
     },
     goerli: {
-      url: process.env.goerli_rpc,
-      accounts: [process.env.goerli_account_pk],
+      url: `${process.env.goerli_rpc}`,
+      accounts: [`${process.env.goerli_account_pk}`],
       timeout: 2147483647,
     },
   },
@@ -74,6 +74,6 @@ module.exports = {
     runOnCompile: true,
   },
   etherscan: {
-    apiKey: process.env.etherscan_api_key,
+    apiKey: `${process.env.etherscan_api_key}`,
   },
 }
