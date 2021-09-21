@@ -1,0 +1,28 @@
+name: build
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: secrets
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - run: git submodule init
+      - run: git submodule update
+      - run: yarn install
+      - run: yarn test
+        env:
+          etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
+          goerli_rpc_key: ${{ secrets.GOERLI_RPC_KEY }}
+          mainnet_rpc_key: ${{ secrets.MAINNET_RPC_KEY }}
+          goerli_account_pk: ${{ secrets.GOERLI_ACCOUNT_PK }}
+          mainnet_account_pk: ${{ secrets.MAINNET_ACCOUNT_PK }}
+      - run: yarn lint
