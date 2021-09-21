@@ -11,6 +11,7 @@ Repository for a governance upgrade which includes:
 ```bash
 git clone --recurse-submodules https://github.com/h-ivor/tornado-relayer-registry.git
 cd tornado-relayer-registry
+yarn
 cp .env.example .env
 yarn test
 ```
