@@ -4,3 +4,6 @@ cache
 artifacts
 build
 dist
+submodules/tornado-lottery-period/contracts/libraries/EtherSend.sol
+submodules/tornado-lottery-period/contracts/VaultAndGasProposal.sol
+contracts/RelayerRegistryProposal.sol
