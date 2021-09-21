@@ -47,6 +47,9 @@ describe('Data and Manager tests', () => {
   let InstancesDataFactory
   let InstancesData
 
+  let GasCompensationFactory
+  let GasCompensation
+
   //// IMPERSONATED ACCOUNTS
   let tornWhale
   let daiWhale
@@ -140,17 +143,21 @@ describe('Data and Manager tests', () => {
     InstancesDataFactory = await ethers.getContractFactory("TornadoInstancesData")
     InstancesData = await InstancesDataFactory.deploy(TornadoInstances)
 
+    GasCompensationFactory = await ethers.getContractFactory("GasCompensationVault")
+    GasCompensation = await GasCompensationFactory.deploy()
+
     ////////////// PROPOSAL OPTION 1
-    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposalOption1')
+    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
-      InstancesData.address
+      InstancesData.address,
+      GasCompensation.address
     )
 
-    Governance = await ethers.getContractAt("GovernanceStakingUpgradeOption1", governance)
+    Governance = await ethers.getContractAt("GovernanceStakingUpgrade", governance)
   })
 
   describe('Start of tests', () => {

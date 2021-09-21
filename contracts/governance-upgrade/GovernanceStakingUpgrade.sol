@@ -19,7 +19,7 @@ interface ITornadoStakingRewards {
   function rebaseSharePriceOnUnlock(uint256 amount) external;
 }
 
-contract GovernanceStakingUpgradeOption1 is GovernanceGasUpgrade {
+contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
 
   constructor(address stakingRewardsAddress, address gasCompLogic, address userVaultAddress) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
