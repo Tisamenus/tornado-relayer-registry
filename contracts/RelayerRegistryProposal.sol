@@ -4,9 +4,6 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { ImmutableGovernanceInformation } from "../submodules/tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
-import { TornadoVault } from "../submodules/tornado-lottery-period/contracts/vault/TornadoVault.sol";
-import { IGovernanceVesting } from "../submodules/tornado-lottery-period/contracts/interfaces/IGovernanceVesting.sol";
-import { TornadoAuctionHandler } from "../submodules/tornado-lottery-period/contracts/auction/TornadoAuctionHandler.sol";
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { LoopbackProxy } from "tornado-governance/contracts/LoopbackProxy.sol";
@@ -33,14 +30,18 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public immutable oldTornadoProxy;
   address public immutable newTornadoProxy;
   address public immutable gasCompLogic;
+  address public immutable tornadoVault;
+  address public immutable registryData;
 
   constructor(
     address relayerRegistryAddress,
+    address registryDataAddress,
     address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
     address stakingAddress,
     address tornadoInstancesDataAddress,
-    address gasCompLogicAddress
+    address gasCompLogicAddress,
+    address vaultAddress
   ) public {
     Registry = RelayerRegistry(relayerRegistryAddress);
     newTornadoProxy = newTornadoProxyAddress;
@@ -48,28 +49,13 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     Staking = TornadoStakingRewards(stakingAddress);
     InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
     gasCompLogic = gasCompLogicAddress;
+    tornadoVault = vaultAddress;
+    registryData = registryDataAddress;
   }
 
   function executeProposal() external {
-    /**
-    The below variable holds the total amount of TORN outflows from all of the proposal executions,
-    which will be used to calculate the proper amount of TORN for transfer to Governance.
-    For an explanation as to how this variable has been calculated with these fix values, please look at:
-    https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/scripts/balance_estimation.md
-    */
-    uint256 totalOutflowsOfProposalExecutions = 120000000000000000000000 +
-      22916666666666666666666 +
-      54999999999999969408000 -
-      27e18;
-
-    uint256 lockedTokenBalancesInGovernance = IGovernanceVesting(GovernanceVesting).released().sub(
-      totalOutflowsOfProposalExecutions
-    );
-
-    address vault = address(new TornadoVault());
-
     LoopbackProxy(returnPayableGovernance()).upgradeTo(
-      address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, vault))
+      address(new GovernanceStakingUpgrade(address(Staking), registryData, gasCompLogic, tornadoVault))
     );
 
     GovernanceStakingUpgrade newGovernance = GovernanceStakingUpgrade(returnPayableGovernance());
@@ -86,25 +72,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     Registry.setMinStakeAmount(1e20);
 
     require(disableOldProxy());
-
-    require(
-      tornToken.transfer(
-        address(newGovernance.userVault()),
-        (tornToken.balanceOf(address(this))).sub(lockedTokenBalancesInGovernance)
-      ),
-      "TORN: transfer failed"
-    );
-
-    uint256 amountOfTornToAuctionOff = 100 ether;
-
-    TornadoAuctionHandler auctionHandler = new TornadoAuctionHandler();
-    tornToken.transfer(address(auctionHandler), amountOfTornToAuctionOff);
-
-    /**
-    As with above, please see:
-    https://github.com/h-ivor/tornado-lottery-period/blob/final_with_auction/contracts/auction/Auction.md
-    */
-    auctionHandler.initializeAuction(block.timestamp + 5 days, uint96(amountOfTornToAuctionOff), 151e16, 1 ether, 0);
   }
 
   function disableOldProxy() private returns (bool) {

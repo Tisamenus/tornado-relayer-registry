@@ -52,6 +52,9 @@ describe('Data and Manager tests', () => {
   let Proposal
   let ProposalFactory
 
+  let MockVault
+  let MockVaultFactory
+
   //// IMPERSONATED ACCOUNTS
   let tornWhale
   let daiWhale
@@ -109,6 +112,9 @@ describe('Data and Manager tests', () => {
       tornadoPools,
     )
 
+    MockVaultFactory = await ethers.getContractFactory('TornadoVault')
+    MockVault = await MockVaultFactory.deploy()
+
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
 
     StakingContract = await StakingFactory.deploy(
@@ -156,11 +162,13 @@ describe('Data and Manager tests', () => {
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
+      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
       InstancesData.address,
       GasCompensation.address,
+      MockVault.address,
     )
 
     Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)

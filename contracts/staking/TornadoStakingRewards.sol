@@ -6,14 +6,8 @@ pragma experimental ABIEncoderV2;
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 
-struct TornadoStakerData {
-  uint128 stakePoints;
-  uint128 timestampLastAction;
-}
-
 contract TornadoStakingRewards {
   using SafeMath for uint256;
-  using SafeMath for uint128;
 
   address public immutable governance;
   uint256 public immutable ratioConstant;
@@ -24,7 +18,7 @@ contract TornadoStakingRewards {
   uint256 public stakedAmount;
   uint256 public startTime;
 
-  mapping(address => TornadoStakerData) public getStakerDataForStaker;
+  mapping(address => uint256) public getLastActivityTimestampForStaker;
 
   constructor(
     address governanceAddress,
@@ -72,24 +66,20 @@ contract TornadoStakingRewards {
     address recipient,
     uint256 amountLockedBeforehand
   ) external onlyGovernance returns (uint256) {
-    _setStakePoints(staker, amountLockedBeforehand);
-    return _consumeStakePoints(staker, recipient);
+    return _consumeStakePoints(staker, recipient, amountLockedBeforehand);
   }
 
-  function _setStakePoints(address staker, uint256 amountLockedBeforehand) private {
-    getStakerDataForStaker[staker] = TornadoStakerData(
-      uint128(
-        uint256(getStakerDataForStaker[staker].stakePoints).add(
-          amountLockedBeforehand.mul(block.timestamp.sub(getStakerDataForStaker[staker].timestampLastAction))
-        )
-      ),
-      uint128(block.timestamp)
-    );
-  }
-
-  function _consumeStakePoints(address staker, address recipient) private returns (uint256 claimed) {
-    claimed = uint256(getStakerDataForStaker[staker].stakePoints).mul(currentSharePrice).div(ratioConstant);
+  function _consumeStakePoints(
+    address staker,
+    address recipient,
+    uint256 amountLockedBeforehand
+  ) private returns (uint256 claimed) {
+    if (getLastActivityTimestampForStaker[staker] == 0) getLastActivityTimestampForStaker[staker] = startTime;
+    claimed = amountLockedBeforehand
+      .mul(block.timestamp.sub(getLastActivityTimestampForStaker[staker]))
+      .mul(currentSharePrice)
+      .div(ratioConstant);
     require(TORN.transfer(recipient, claimed));
-    getStakerDataForStaker[staker].stakePoints = 0;
+    getLastActivityTimestampForStaker[staker] = block.timestamp;
   }
 }

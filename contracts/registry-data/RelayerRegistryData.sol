@@ -16,6 +16,8 @@ contract RelayerRegistryData {
 
   GlobalPoolData public protocolPoolData;
 
+  uint256 public lastFeeUpdateTimestamp;
+
   constructor(
     address dataManagerProxy,
     address tornadoGovernance,
@@ -34,6 +36,11 @@ contract RelayerRegistryData {
   modifier onlyGovernance() {
     require(msg.sender == governance);
     _;
+  }
+
+  function updateFeesWithTimestampStore() external {
+    lastFeeUpdateTimestamp = block.timestamp;
+    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
   }
 
   function updateFees() external {
