@@ -60,7 +60,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     torn.permit(owner, address(this), amount, deadline, v, r, s);
     _transferTokens(owner, amount);
 
-    lockedBalance[owner] = lockedBalance[owner].add(claimed);
+    if (success) lockedBalance[owner] = lockedBalance[owner].add(claimed);
     Staking.rebaseSharePriceOnLock(amount.add(claimed));
   }
 
@@ -70,12 +70,12 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
 
     _transferTokens(msg.sender, amount);
 
-    lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
+    if (success) lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
     Staking.rebaseSharePriceOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
-    Staking.governanceClaimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
+    (, bool success) = Staking.governanceClaimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
