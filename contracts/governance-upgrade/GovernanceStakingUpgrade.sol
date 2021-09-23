@@ -10,7 +10,7 @@ interface ITornadoStakingRewards {
     address staker,
     address recipient,
     uint256 amountLockedBeforehand
-  ) external returns (uint256);
+  ) external returns (uint256, bool);
 
   function setStakePoints(address staker, uint256 amountLockedBeforehand) external;
 
@@ -54,21 +54,23 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     bytes32 r,
     bytes32 s
   ) external virtual override {
-    uint256 claimed = Staking.governanceClaimFor(owner, address(userVault), lockedBalance[owner]);
+    (uint256 claimed, bool success) = Staking.governanceClaimFor(owner, address(userVault), lockedBalance[owner]);
+    if (!success) claimed = 0;
 
     torn.permit(owner, address(this), amount, deadline, v, r, s);
     _transferTokens(owner, amount);
 
-    lockedBalance[owner] += claimed;
+    lockedBalance[owner] = lockedBalance[owner].add(claimed);
     Staking.rebaseSharePriceOnLock(amount.add(claimed));
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
-    uint256 claimed = Staking.governanceClaimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
+    (uint256 claimed, bool success) = Staking.governanceClaimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
+    if (!success) claimed = 0;
 
     _transferTokens(msg.sender, amount);
 
-    lockedBalance[msg.sender] += claimed;
+    lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
     Staking.rebaseSharePriceOnLock(amount.add(claimed));
   }
 

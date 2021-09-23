@@ -65,7 +65,7 @@ contract TornadoStakingRewards {
     address account,
     address recipient,
     uint256 amountLockedBeforehand
-  ) external onlyGovernance returns (uint256) {
+  ) external onlyGovernance returns (uint256, bool) {
     return _calculateAndPayReward(account, recipient, amountLockedBeforehand);
   }
 
@@ -73,13 +73,13 @@ contract TornadoStakingRewards {
     address account,
     address recipient,
     uint256 amountLockedBeforehand
-  ) private returns (uint256 claimed) {
+  ) private returns (uint256 claimed, bool transferSuccess) {
     if (getLastActivityTimestampForAccount[account] == 0) getLastActivityTimestampForAccount[account] = startTime;
     claimed = amountLockedBeforehand
       .mul(block.timestamp.sub(getLastActivityTimestampForAccount[account]))
       .mul(currentSharePrice)
       .div(ratioConstant);
-    require(TORN.transfer(recipient, claimed));
+    transferSuccess = TORN.transfer(recipient, claimed);
     getLastActivityTimestampForAccount[account] = block.timestamp;
   }
 }
