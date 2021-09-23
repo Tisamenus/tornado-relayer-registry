@@ -36,23 +36,26 @@ contract RegistryDataManager {
   {
     newPoolIdToFee = new uint256[](poolIdToPoolData.length);
     for (uint256 i = 0; i < poolIdToPoolData.length; i++) {
-      newPoolIdToFee[i] = getBalanceOfPool(poolIdToPoolData[i].addressData, i)
-        .mul(1e18)
-        .div(
-          (i > 3)
-            ? UniswapV3OracleHelper.getPriceRatioOfTokens(
-              [torn, ERC20Tornado(poolIdToPoolData[i].addressData).token()],
-              [uniPoolFeeTorn, uint24(poolIdToPoolData[i].uniPoolFee)],
-              uint32(globalPoolData.globalPeriod)
-            )
-            : UniswapV3OracleHelper.getPriceOfTokenInWETH(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
-        )
-        .mul(uint256(globalPoolData.protocolFee))
-        .div(1e18);
+      newPoolIdToFee[i] = updateSingleRegistryDataArrayElement(poolIdToPoolData[i], globalPoolData, i);
     }
   }
 
-  function getBalanceOfPool(address poolAddress, uint256 isEthIndex) internal view returns (uint256) {
-    return (isEthIndex > 3) ? IERC20(ERC20Tornado(poolAddress).token()).balanceOf(poolAddress) : poolAddress.balance;
+  function updateSingleRegistryDataArrayElement(
+    PoolData memory poolData,
+    GlobalPoolData memory globalPoolData,
+    uint256 isEtherIndex
+  ) public view returns (uint256 newFee) {
+    newFee = (isEtherIndex > 3)
+      ? IERC20(ERC20Tornado(poolData.addressData).token()).balanceOf(poolData.addressData).mul(1e18).div(
+        UniswapV3OracleHelper.getPriceRatioOfTokens(
+          [torn, ERC20Tornado(poolData.addressData).token()],
+          [uniPoolFeeTorn, uint24(poolData.uniPoolFee)],
+          uint32(globalPoolData.globalPeriod)
+        )
+      )
+      : poolData.addressData.balance.mul(1e18).div(
+        UniswapV3OracleHelper.getPriceOfTokenInWETH(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
+      );
+    newFee = newFee.mul(uint256(globalPoolData.protocolFee)).div(1e18);
   }
 }

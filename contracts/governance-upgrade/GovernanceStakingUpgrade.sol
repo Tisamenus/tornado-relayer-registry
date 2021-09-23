@@ -22,7 +22,7 @@ interface ITornadoStakingRewards {
 interface IRelayerRegistryData {
   function lastFeeUpdateTimestamp() external view returns (uint256);
 
-  function updateFeesWithTimestampStore() external;
+  function updateAllFeesWithTimestampStore() external;
 }
 
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
@@ -39,11 +39,11 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     RegistryData = IRelayerRegistryData(registryDataAddress);
   }
 
-  function updateFees()
+  function updateAllFees()
     external
     gasCompensation(msg.sender, RegistryData.lastFeeUpdateTimestamp() + 6 hours <= block.timestamp, 21e3)
   {
-    RegistryData.updateFeesWithTimestampStore();
+    RegistryData.updateAllFeesWithTimestampStore();
   }
 
   function lock(

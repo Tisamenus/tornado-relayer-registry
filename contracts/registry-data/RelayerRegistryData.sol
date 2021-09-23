@@ -38,13 +38,15 @@ contract RelayerRegistryData {
     _;
   }
 
-  function updateFeesWithTimestampStore() external {
+  function updateAllFeesWithTimestampStore() external {
     lastFeeUpdateTimestamp = block.timestamp;
-    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
+    updateAllFees();
   }
 
-  function updateFees() external {
-    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
+  function updateFeesOfPools(uint256[] memory poolIds) external {
+    for (uint256 i = 0; i < poolIds.length; i++) {
+      updateFeeOfPool(poolIds[i]);
+    }
   }
 
   /**
@@ -64,5 +66,17 @@ contract RelayerRegistryData {
 
   function setProtocolPeriod(uint128 newPeriod) external onlyGovernance {
     protocolPoolData.globalPeriod = newPeriod;
+  }
+
+  function updateAllFees() public {
+    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
+  }
+
+  function updateFeeOfPool(uint256 poolId) public {
+    getFeeForPoolId[poolId] = DataManager.updateSingleRegistryDataArrayElement(
+      getPoolDataForPoolId[poolId],
+      protocolPoolData,
+      poolId
+    );
   }
 }

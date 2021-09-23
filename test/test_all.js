@@ -264,7 +264,7 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should pass initial fee update', async () => {
-        await RegistryData.updateFees()
+        await RegistryData.updateAllFees()
         for (let i = 0; i < tornadoPools.length; i++) {
           console.log(
             `${poolTokens[i]}-${denominations[i]}-pool fee: `,
@@ -323,7 +323,7 @@ describe('Data and Manager tests', () => {
             'Share price: ',
             (await StakingContract.currentSharePrice()).toString(),
             ', staked amount: ',
-            (await StakingContract.stakedAmount()).toString(),
+            (await StakingContract.lockedAmount()).toString(),
           )
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
@@ -337,8 +337,8 @@ describe('Data and Manager tests', () => {
         const sharePrice = await StakingContract.currentSharePrice()
         const k5 = ethers.utils.parseEther('5000')
 
-        let stakedAmount = await StakingContract.stakedAmount()
-        let newSharePrice = sharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
+        let lockedAmount = await StakingContract.lockedAmount()
+        let newSharePrice = sharePrice.mul(lockedAmount).div(lockedAmount.add(k5))
 
         for (let i = 0; i < 3; i++) {
           const TORN = await (await getToken(torn)).connect(signerArray[i])
@@ -346,8 +346,8 @@ describe('Data and Manager tests', () => {
           const gov = await Governance.connect(signerArray[i])
           await gov.lockWithApproval(k5)
           expect(await StakingContract.currentSharePrice()).to.be.equal(newSharePrice)
-          stakedAmount = await StakingContract.stakedAmount()
-          newSharePrice = newSharePrice.mul(stakedAmount).div(stakedAmount.add(k5))
+          lockedAmount = await StakingContract.lockedAmount()
+          newSharePrice = newSharePrice.mul(lockedAmount).div(lockedAmount.add(k5))
         }
       })
 

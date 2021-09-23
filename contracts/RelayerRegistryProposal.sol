@@ -58,8 +58,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(address(Staking), registryData, gasCompLogic, tornadoVault))
     );
 
-    GovernanceStakingUpgrade newGovernance = GovernanceStakingUpgrade(returnPayableGovernance());
-
     Registry.registerProxy(newTornadoProxy);
 
     RelayerRegistryData RegistryData = Registry.RegistryData();

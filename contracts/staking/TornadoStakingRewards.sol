@@ -15,20 +15,20 @@ contract TornadoStakingRewards {
 
   uint256 public currentSharePrice;
   uint256 public distributionPeriod;
-  uint256 public stakedAmount;
+  uint256 public lockedAmount;
   uint256 public startTime;
 
-  mapping(address => uint256) public getLastActivityTimestampForStaker;
+  mapping(address => uint256) public getLastActivityTimestampForAccount;
 
   constructor(
     address governanceAddress,
     address tornAddress,
-    uint256 initialStakedAmount
+    uint256 initialLockedAmount
   ) public {
     governance = governanceAddress;
     TORN = IERC20(tornAddress);
     ratioConstant = IERC20(tornAddress).totalSupply();
-    stakedAmount = initialStakedAmount;
+    lockedAmount = initialLockedAmount;
   }
 
   modifier onlyGovernance() {
@@ -40,20 +40,20 @@ contract TornadoStakingRewards {
     require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
     // will throw if block.timestamp - startTime > distributionPeriod
     currentSharePrice = currentSharePrice.add(
-      tornAmount.mul(ratioConstant).div(stakedAmount).div(distributionPeriod.sub(block.timestamp.sub(startTime)))
+      tornAmount.mul(ratioConstant).div(lockedAmount).div(distributionPeriod.sub(block.timestamp.sub(startTime)))
     );
   }
 
   function rebaseSharePriceOnLock(uint256 amount) external onlyGovernance {
-    uint256 newStakedAmount = stakedAmount.add(amount);
-    currentSharePrice = currentSharePrice.mul(stakedAmount).div(newStakedAmount);
-    stakedAmount = newStakedAmount;
+    uint256 newLockedAmount = lockedAmount.add(amount);
+    currentSharePrice = currentSharePrice.mul(lockedAmount).div(newLockedAmount);
+    lockedAmount = newLockedAmount;
   }
 
   function rebaseSharePriceOnUnlock(uint256 amount) external onlyGovernance {
-    uint256 newStakedAmount = stakedAmount.sub(amount);
-    currentSharePrice = currentSharePrice.mul(stakedAmount).div(newStakedAmount);
-    stakedAmount = newStakedAmount;
+    uint256 newLockedAmount = lockedAmount.sub(amount);
+    currentSharePrice = currentSharePrice.mul(lockedAmount).div(newLockedAmount);
+    lockedAmount = newLockedAmount;
   }
 
   function setDistributionPeriod(uint256 period) external onlyGovernance {
@@ -62,24 +62,24 @@ contract TornadoStakingRewards {
   }
 
   function governanceClaimFor(
-    address staker,
+    address account,
     address recipient,
     uint256 amountLockedBeforehand
   ) external onlyGovernance returns (uint256) {
-    return _consumeStakePoints(staker, recipient, amountLockedBeforehand);
+    return _calculateAndPayReward(account, recipient, amountLockedBeforehand);
   }
 
-  function _consumeStakePoints(
-    address staker,
+  function _calculateAndPayReward(
+    address account,
     address recipient,
     uint256 amountLockedBeforehand
   ) private returns (uint256 claimed) {
-    if (getLastActivityTimestampForStaker[staker] == 0) getLastActivityTimestampForStaker[staker] = startTime;
+    if (getLastActivityTimestampForAccount[account] == 0) getLastActivityTimestampForAccount[account] = startTime;
     claimed = amountLockedBeforehand
-      .mul(block.timestamp.sub(getLastActivityTimestampForStaker[staker]))
+      .mul(block.timestamp.sub(getLastActivityTimestampForAccount[account]))
       .mul(currentSharePrice)
       .div(ratioConstant);
     require(TORN.transfer(recipient, claimed));
-    getLastActivityTimestampForStaker[staker] = block.timestamp;
+    getLastActivityTimestampForAccount[account] = block.timestamp;
   }
 }
