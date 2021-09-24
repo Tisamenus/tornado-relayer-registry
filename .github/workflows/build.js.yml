@@ -15,9 +15,10 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
+      - run: yarn install
       - run: git submodule init
       - run: git submodule update
-      - run: yarn install
+      - run: yarn hardhat compile
       - run: yarn test
         env:
           etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
