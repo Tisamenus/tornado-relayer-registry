@@ -6,6 +6,11 @@ pragma experimental ABIEncoderV2;
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 
+struct RewardsDurationData {
+  uint128 rewardRateChange;
+  uint128 endTimestamp;
+}
+
 contract TornadoStakingRewards {
   using SafeMath for uint256;
 
@@ -18,6 +23,9 @@ contract TornadoStakingRewards {
   uint256 public rewardRate;
   uint256 public lockedAmount;
   uint256 public distributionPeriod;
+
+  RewardsDurationData[] public rewardsDurationData;
+  uint256 public periodIndex;
 
   mapping(address => uint256) public collectedAfterAccountInteraction;
 
@@ -41,8 +49,14 @@ contract TornadoStakingRewards {
     require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
     // will throw if block.timestamp - startTime > distributionPeriod
     uint256 oldRewardRate = rewardRate;
+    uint256 period = distributionPeriod;
+    uint256 dRate = tornAmount.div(period);
+
+    rewardsDurationData.push(RewardsDurationData(uint128(dRate), uint128(block.timestamp.add(period))));
+
     _updateRewardsState(oldRewardRate);
-    rewardRate = oldRewardRate.add(tornAmount.div(distributionPeriod));
+
+    rewardRate = oldRewardRate.add(dRate);
   }
 
   function updateLockedAmountOnLock(uint256 amount) external onlyGovernance {
@@ -82,11 +96,31 @@ contract TornadoStakingRewards {
   }
 
   function _updateRewardsState(uint256 oldRewardRate) private returns (uint256) {
-    uint256 newTotalCollectedShareValue = totalCollectedShareValue.add(
-      oldRewardRate.mul(ratioConstant).mul(block.timestamp.sub(lastActivityTimestamp)).div(lockedAmount).div(distributionPeriod)
+    uint256 newTotalCollectedShareValue = totalCollectedShareValue;
+    uint256 divisor = lockedAmount.mul(distributionPeriod);
+    uint256 lastTimestamp = lastActivityTimestamp;
+
+    RewardsDurationData memory durationData = rewardsDurationData[periodIndex];
+
+    if (block.timestamp >= durationData.endTimestamp) {
+      periodIndex++;
+
+      newTotalCollectedShareValue = newTotalCollectedShareValue.add(
+        oldRewardRate.mul(ratioConstant).mul(uint256(durationData.endTimestamp).sub(lastTimestamp)).div(divisor)
+      );
+      lastTimestamp = durationData.endTimestamp;
+
+      oldRewardRate = oldRewardRate.sub(durationData.rewardRateChange);
+      rewardRate = oldRewardRate;
+    }
+
+    newTotalCollectedShareValue = newTotalCollectedShareValue.add(
+      oldRewardRate.mul(ratioConstant).mul(block.timestamp.sub(lastTimestamp)).div(divisor)
     );
+
     totalCollectedShareValue = newTotalCollectedShareValue;
     lastActivityTimestamp = block.timestamp;
+
     return newTotalCollectedShareValue;
   }
 }
