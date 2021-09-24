@@ -68,7 +68,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   }
 
   function unlock(uint256 amount) external virtual override {
-    (, bool success) = Staking.governanceClaimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
+    Staking.governanceClaimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
