@@ -47,7 +47,6 @@ contract TornadoStakingRewards {
 
   function addStake(address sender, uint256 tornAmount) external {
     require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
-    // will throw if block.timestamp - startTime > distributionPeriod
     uint256 oldRewardRate = rewardRate;
     uint256 period = distributionPeriod;
     uint256 dRate = tornAmount.div(period);
