@@ -39,13 +39,6 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     RegistryData = IRelayerRegistryData(registryDataAddress);
   }
 
-  function updateAllFees()
-    external
-    gasCompensation(msg.sender, RegistryData.lastFeeUpdateTimestamp() + 6 hours <= block.timestamp, 21e3)
-  {
-    RegistryData.updateAllFeesWithTimestampStore();
-  }
-
   function lock(
     address owner,
     uint256 amount,

@@ -2051,9 +2051,9 @@ blake2b-wasm@^1.1.0:
   dependencies:
     nanoassert "^1.0.0"
 
-"blake2b-wasm@git+https://github.com/jbaylina/blake2b-wasm.git":
+"blake2b-wasm@https://github.com/jbaylina/blake2b-wasm.git":
   version "2.1.0"
-  resolved "git+https://github.com/jbaylina/blake2b-wasm.git#0d5f024b212429c7f50a7f533aa3a2406b5b42b3"
+  resolved "https://github.com/jbaylina/blake2b-wasm.git#0d5f024b212429c7f50a7f533aa3a2406b5b42b3"
   dependencies:
     nanoassert "^1.0.0"
 
@@ -8803,10 +8803,10 @@ torn-token@^1.0.0:
     ethereumjs-util "^7.0.3"
     web3 "^1.2.11"
 
-tornado-anonymity-mining@2.1.4:
-  version "2.1.4"
-  resolved "https://registry.yarnpkg.com/tornado-anonymity-mining/-/tornado-anonymity-mining-2.1.4.tgz#a93f44696a237ca9e21dcc9f23ff797fc3c1c0dd"
-  integrity sha512-vpvTHgqk4ABlPNayqG8vuG3HV6Xe+t30yRmO47nVJvSu4NHzr1NwPh9DD4Kxy6VK2OzQlA3wDgU2K9nAL3qYOw==
+tornado-anonymity-mining@2.1.5:
+  version "2.1.5"
+  resolved "https://registry.yarnpkg.com/tornado-anonymity-mining/-/tornado-anonymity-mining-2.1.5.tgz#7dbc7f099ce9667f2cc91fbb7ce8f78663afc4cc"
+  integrity sha512-hYXKHyPs7nqpGjPgWpuBJrnDSTZ4FifU8Mv/ujueYXVOzkcL64ZOq30JFDE6ANQ7D09AhD7B7pSx/Odgn+nlgw==
   dependencies:
     circomlib "git+https://github.com/tornadocash/circomlib.git#3b492f9801573eebcfe1b6c584afe8a3beecf2b4"
     decimal.js "^10.2.0"
