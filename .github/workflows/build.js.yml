@@ -19,6 +19,12 @@ jobs:
       - run: git submodule init
       - run: git submodule update
       - run: yarn hardhat compile
+        env:
+          etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
+          goerli_rpc_key: ${{ secrets.GOERLI_RPC_KEY }}
+          mainnet_rpc_key: ${{ secrets.MAINNET_RPC_KEY }}
+          goerli_account_pk: ${{ secrets.GOERLI_ACCOUNT_PK }}
+          mainnet_account_pk: ${{ secrets.MAINNET_ACCOUNT_PK }}
       - run: yarn test
         env:
           etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
