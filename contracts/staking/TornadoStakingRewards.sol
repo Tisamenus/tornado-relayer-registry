@@ -74,11 +74,14 @@ contract TornadoStakingRewards {
     address recipient,
     uint256 amountLockedBeforehand
   ) private returns (uint256 claimed, bool transferSuccess) {
-    if (getLastActivityTimestampForAccount[account] == 0) getLastActivityTimestampForAccount[account] = startTime;
+    uint256 timestamp = getLastActivityTimestampForAccount[account];
+    timestamp = (timestamp == 0) ? startTime : timestamp;
+
     claimed = amountLockedBeforehand
-      .mul(block.timestamp.sub(getLastActivityTimestampForAccount[account]))
+      .mul(block.timestamp.sub(timestamp)
       .mul(currentSharePrice)
       .div(ratioConstant);
+
     transferSuccess = TORN.transfer(recipient, claimed);
     getLastActivityTimestampForAccount[account] = block.timestamp;
   }

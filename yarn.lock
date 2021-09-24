@@ -725,24 +725,10 @@
   dependencies:
     "@openzeppelin/upgrades-core" "^1.9.0"
 
-"@openzeppelin/upgrades-core@^1.0.1":
+"@openzeppelin/upgrades-core@^1.0.1", "@openzeppelin/upgrades-core@^1.5.1":
   version "1.9.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/upgrades-core/-/upgrades-core-1.9.2.tgz#9d7497f58b1f2bb704c162c716302bfff7923749"
   integrity sha512-LU2NMvnz+6jXheh3Rnfql4UgtS7ViHWwcivS3JRI9DMCazmlyibwMYz5QMakrNNGAF7bY0t0Sw1UCfe5qTYxjA==
-  dependencies:
-    bn.js "^5.1.2"
-    cbor "^8.0.0"
-    chalk "^4.1.0"
-    compare-versions "^3.6.0"
-    debug "^4.1.1"
-    ethereumjs-util "^7.0.3"
-    proper-lockfile "^4.1.1"
-    solidity-ast "^0.4.15"
-
-"@openzeppelin/upgrades-core@^1.5.1":
-  version "1.9.1"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/upgrades-core/-/upgrades-core-1.9.1.tgz#53e1d00b1b03dff2e3752fd7b275b3e27ccfd9b3"
-  integrity sha512-ugfnnzFfbiWPlPjExwgIewbHmfNxKZISjtMBmLXG/q3Sn0aRQrHJ/XS1Q/AofxQ2rtGknelzJa+v+R1YGJ2Avg==
   dependencies:
     bn.js "^5.1.2"
     cbor "^8.0.0"
@@ -2065,9 +2051,9 @@ blake2b-wasm@^1.1.0:
   dependencies:
     nanoassert "^1.0.0"
 
-"blake2b-wasm@https://github.com/jbaylina/blake2b-wasm.git":
+"blake2b-wasm@git+https://github.com/jbaylina/blake2b-wasm.git":
   version "2.1.0"
-  resolved "https://github.com/jbaylina/blake2b-wasm.git#0d5f024b212429c7f50a7f533aa3a2406b5b42b3"
+  resolved "git+https://github.com/jbaylina/blake2b-wasm.git#0d5f024b212429c7f50a7f533aa3a2406b5b42b3"
   dependencies:
     nanoassert "^1.0.0"
 
@@ -8817,7 +8803,7 @@ torn-token@^1.0.0:
     ethereumjs-util "^7.0.3"
     web3 "^1.2.11"
 
-tornado-anonymity-mining@^2.1.4:
+tornado-anonymity-mining@2.1.4:
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/tornado-anonymity-mining/-/tornado-anonymity-mining-2.1.4.tgz#a93f44696a237ca9e21dcc9f23ff797fc3c1c0dd"
   integrity sha512-vpvTHgqk4ABlPNayqG8vuG3HV6Xe+t30yRmO47nVJvSu4NHzr1NwPh9DD4Kxy6VK2OzQlA3wDgU2K9nAL3qYOw==
