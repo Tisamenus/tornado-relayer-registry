@@ -13,12 +13,13 @@ contract TornadoStakingRewards {
   uint256 public immutable ratioConstant;
   IERC20 public immutable TORN;
 
-  uint256 public currentSharePrice;
-  uint256 public distributionPeriod;
+  uint256 public totalCollectedShareValue;
+  uint256 public lastActivityTimestamp;
+  uint256 public rewardRate;
   uint256 public lockedAmount;
-  uint256 public startTime;
+  uint256 public distributionPeriod;
 
-  mapping(address => uint256) public getLastActivityTimestampForAccount;
+  mapping(address => uint256) public collectedAfterAccountInteraction;
 
   constructor(
     address governanceAddress,
@@ -39,26 +40,21 @@ contract TornadoStakingRewards {
   function addStake(address sender, uint256 tornAmount) external {
     require(TORN.transferFrom(sender, address(this), tornAmount), "tf_fail");
     // will throw if block.timestamp - startTime > distributionPeriod
-    currentSharePrice = currentSharePrice.add(
-      tornAmount.mul(ratioConstant).div(lockedAmount).div(distributionPeriod.sub(block.timestamp.sub(startTime)))
-    );
+    uint256 oldRewardRate = rewardRate;
+    _updateRewardsState(oldRewardRate);
+    rewardRate = oldRewardRate.add(tornAmount.div(distributionPeriod));
   }
 
-  function rebaseSharePriceOnLock(uint256 amount) external onlyGovernance {
-    uint256 newLockedAmount = lockedAmount.add(amount);
-    currentSharePrice = currentSharePrice.mul(lockedAmount).div(newLockedAmount);
-    lockedAmount = newLockedAmount;
+  function updateLockedAmountOnLock(uint256 amount) external onlyGovernance {
+    lockedAmount = lockedAmount.add(amount);
   }
 
-  function rebaseSharePriceOnUnlock(uint256 amount) external onlyGovernance {
-    uint256 newLockedAmount = lockedAmount.sub(amount);
-    currentSharePrice = currentSharePrice.mul(lockedAmount).div(newLockedAmount);
-    lockedAmount = newLockedAmount;
+  function updateLockedAmountOnUnlock(uint256 amount) external onlyGovernance {
+    lockedAmount = lockedAmount.sub(amount);
   }
 
   function setDistributionPeriod(uint256 period) external onlyGovernance {
     distributionPeriod = period;
-    startTime = block.timestamp;
   }
 
   function governanceClaimFor(
@@ -74,15 +70,23 @@ contract TornadoStakingRewards {
     address recipient,
     uint256 amountLockedBeforehand
   ) private returns (uint256 claimed, bool transferSuccess) {
-    uint256 timestamp = getLastActivityTimestampForAccount[account];
-    timestamp = (timestamp == 0) ? startTime : timestamp;
+    uint256 newTotalCollectedShareValue = _updateRewardsState(rewardRate);
 
-    claimed = amountLockedBeforehand
-      .mul(block.timestamp.sub(timestamp)
-      .mul(currentSharePrice)
-      .div(ratioConstant);
+    claimed = (newTotalCollectedShareValue.sub(collectedAfterAccountInteraction[account])).mul(amountLockedBeforehand).div(
+      ratioConstant
+    );
+
+    collectedAfterAccountInteraction[account] = newTotalCollectedShareValue;
 
     transferSuccess = TORN.transfer(recipient, claimed);
-    getLastActivityTimestampForAccount[account] = block.timestamp;
+  }
+
+  function _updateRewardsState(uint256 oldRewardRate) private returns (uint256) {
+    uint256 newTotalCollectedShareValue = totalCollectedShareValue.add(
+      oldRewardRate.mul(ratioConstant).mul(block.timestamp.sub(lastActivityTimestamp)).div(lockedAmount).div(distributionPeriod)
+    );
+    totalCollectedShareValue = newTotalCollectedShareValue;
+    lastActivityTimestamp = block.timestamp;
+    return newTotalCollectedShareValue;
   }
 }

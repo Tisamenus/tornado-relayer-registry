@@ -321,7 +321,7 @@ describe('Data and Manager tests', () => {
 
           console.log(
             'Share price: ',
-            (await StakingContract.currentSharePrice()).toString(),
+            (await StakingContract.totalCollectedShareValue()).toString(),
             ', staked amount: ',
             (await StakingContract.lockedAmount()).toString(),
           )
@@ -334,7 +334,7 @@ describe('Data and Manager tests', () => {
 
     describe('Test registry staking', () => {
       it('Accounts locking balances should cause rebase of share price', async function () {
-        const sharePrice = await StakingContract.currentSharePrice()
+        const sharePrice = await StakingContract.totalCollectedShareValue()
         const k5 = ethers.utils.parseEther('5000')
 
         let lockedAmount = await StakingContract.lockedAmount()
@@ -345,7 +345,7 @@ describe('Data and Manager tests', () => {
           await TORN.approve(governance, ethers.utils.parseEther('200000000'))
           const gov = await Governance.connect(signerArray[i])
           await gov.lockWithApproval(k5)
-          expect(await StakingContract.currentSharePrice()).to.be.equal(newSharePrice)
+          expect(await StakingContract.totalCollectedShareValue()).to.be.gt(sharePrice)
           lockedAmount = await StakingContract.lockedAmount()
           newSharePrice = newSharePrice.mul(lockedAmount).div(lockedAmount.add(k5))
         }

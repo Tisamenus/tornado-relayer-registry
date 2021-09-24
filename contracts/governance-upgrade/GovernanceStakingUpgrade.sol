@@ -14,9 +14,9 @@ interface ITornadoStakingRewards {
 
   function setStakePoints(address staker, uint256 amountLockedBeforehand) external;
 
-  function rebaseSharePriceOnLock(uint256 amount) external;
+  function updateLockedAmountOnLock(uint256 amount) external;
 
-  function rebaseSharePriceOnUnlock(uint256 amount) external;
+  function updateLockedAmountOnUnlock(uint256 amount) external;
 }
 
 interface IRelayerRegistryData {
@@ -61,7 +61,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(owner, amount);
 
     if (success) lockedBalance[owner] = lockedBalance[owner].add(claimed);
-    Staking.rebaseSharePriceOnLock(amount.add(claimed));
+    Staking.updateLockedAmountOnLock(amount.add(claimed));
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
@@ -71,7 +71,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(msg.sender, amount);
 
     if (success) lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
-    Staking.rebaseSharePriceOnLock(amount.add(claimed));
+    Staking.updateLockedAmountOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
@@ -81,6 +81,6 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
     userVault.withdrawTorn(msg.sender, amount);
 
-    Staking.rebaseSharePriceOnUnlock(amount);
+    Staking.updateLockedAmountOnUnlock(amount);
   }
 }
