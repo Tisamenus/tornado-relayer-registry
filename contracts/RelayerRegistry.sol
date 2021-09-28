@@ -115,8 +115,12 @@ contract RelayerRegistry {
     address sender,
     address relayer,
     address poolAddress
-  ) external onlyRelayer(sender, relayer) {
-    _burn(relayer, poolAddress);
+  ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
+    getMetadataForRelayer[relayer].intData.balance = uint128(
+      getMetadataForRelayer[relayer].intData.balance.sub(
+        uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)))
+      )
+    );
   }
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
@@ -151,13 +155,5 @@ contract RelayerRegistry {
   function _stakeToRelayer(address relayer, uint256 stake) private {
     Staking.addStake(relayer, stake);
     emit StakeAddedToRelayer(relayer, stake);
-  }
-
-  function _burn(address relayer, address poolAddress) private onlyTornadoProxy {
-    getMetadataForRelayer[relayer].intData.balance = uint128(
-      getMetadataForRelayer[relayer].intData.balance.sub(
-        uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)))
-      )
-    );
   }
 }

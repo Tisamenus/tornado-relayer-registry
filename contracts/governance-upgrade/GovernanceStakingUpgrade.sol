@@ -12,31 +12,19 @@ interface ITornadoStakingRewards {
     uint256 amountLockedBeforehand
   ) external returns (uint256, bool);
 
-  function setStakePoints(address staker, uint256 amountLockedBeforehand) external;
-
   function updateLockedAmountOnLock(uint256 amount) external;
-
   function updateLockedAmountOnUnlock(uint256 amount) external;
-}
-
-interface IRelayerRegistryData {
-  function lastFeeUpdateTimestamp() external view returns (uint256);
-
-  function updateAllFeesWithTimestampStore() external;
 }
 
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
-  IRelayerRegistryData public immutable RegistryData;
 
   constructor(
     address stakingRewardsAddress,
-    address registryDataAddress,
     address gasCompLogic,
     address userVaultAddress
   ) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
-    RegistryData = IRelayerRegistryData(registryDataAddress);
   }
 
   function lock(

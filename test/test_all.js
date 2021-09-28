@@ -162,7 +162,6 @@ describe('Data and Manager tests', () => {
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
-      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,

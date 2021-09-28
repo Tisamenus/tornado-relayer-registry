@@ -33,11 +33,9 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public immutable newTornadoProxy;
   address public immutable gasCompLogic;
   address public immutable tornadoVault;
-  address public immutable registryData;
 
   constructor(
     address relayerRegistryAddress,
-    address registryDataAddress,
     address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
     address stakingAddress,
@@ -52,12 +50,11 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
     gasCompLogic = gasCompLogicAddress;
     tornadoVault = vaultAddress;
-    registryData = registryDataAddress;
   }
 
   function executeProposal() external {
     LoopbackProxy(returnPayableGovernance()).upgradeTo(
-      address(new GovernanceStakingUpgrade(address(Staking), registryData, gasCompLogic, tornadoVault))
+      address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
     );
 
     Registry.registerProxy(newTornadoProxy);
