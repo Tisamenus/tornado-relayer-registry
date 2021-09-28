@@ -14,7 +14,7 @@ contract RelayerRegistryData {
 
   mapping(address => uint256) public getPoolIdForAddress;
 
-  GlobalPoolData public protocolPoolData;
+  GlobalPoolData public dataForTWAPOracle;
 
   event FeesUpdated(uint256 indexed timestamp);
   event FeeUpdated(uint256 indexed timestamp, uint256 indexed poolId);
@@ -57,22 +57,22 @@ contract RelayerRegistryData {
   }
 
   function setProtocolFee(uint128 newFee) external onlyGovernance {
-    protocolPoolData.protocolFee = newFee;
+    dataForTWAPOracle.protocolFee = newFee;
   }
 
-  function setProtocolPeriod(uint128 newPeriod) external onlyGovernance {
-    protocolPoolData.globalPeriod = newPeriod;
+  function setPeriodForTWAPOracle(uint128 newPeriod) external onlyGovernance {
+    dataForTWAPOracle.globalPeriod = newPeriod;
   }
 
   function updateAllFees() public {
-    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
+    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, dataForTWAPOracle);
     emit FeesUpdated(block.timestamp);
   }
 
   function updateFeeOfPool(uint256 poolId) public {
     getFeeForPoolId[poolId] = DataManager.updateSingleRegistryDataArrayElement(
       getPoolDataForPoolId[poolId],
-      protocolPoolData,
+      dataForTWAPOracle,
       poolId
     );
     emit FeeUpdated(block.timestamp, poolId);

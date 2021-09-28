@@ -253,7 +253,8 @@ describe('Data and Manager tests', () => {
 
     describe('Check params for deployed contracts', () => {
       it('Should assert params are correct', async function () {
-        const globalData = await RegistryData.protocolPoolData()
+        const globalData = await RegistryData.dataForTWAPOracle()
+
         expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
@@ -308,7 +309,7 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should succesfully register all relayers', async function () {
-        const metadata = { isRegistered: true, fee: ethers.utils.parseEther('0.1') }
+        const fee = ethers.utils.parseEther('0.1')
 
         for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
@@ -319,7 +320,9 @@ describe('Data and Manager tests', () => {
 
           await minewait(86400 * 10) // delay so we can test further below
 
-          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), metadata)
+          await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [
+            `${relayers[i].address}`,
+          ])
 
           console.log(
             'Share price: ',
@@ -328,8 +331,8 @@ describe('Data and Manager tests', () => {
             (await StakingContract.lockedAmount()).toString(),
           )
 
-          expect(await RelayerRegistry.isRelayerRegistered(relayers[i].node)).to.be.true
-          expect(await RelayerRegistry.getRelayerFee(relayers[i].node)).to.equal(metadata.fee)
+          expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address)).to.be.true
+          expect(await RelayerRegistry.getRelayerFee(relayers[i].address)).to.equal(fee)
         }
       })
     })
@@ -391,7 +394,7 @@ describe('Data and Manager tests', () => {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
-        const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
         const instance = await ethers.getContractAt(
           'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
@@ -431,14 +434,14 @@ describe('Data and Manager tests', () => {
           await instance.denomination(),
         )
 
-        expect(await RelayerRegistry.getBalanceForRelayer(relayers[0].node)).to.be.lt(initialBalance)
+        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
       })
 
       it('This time around relayer should not have enough funds for withdrawal', async function () {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
-        const initialBalance = await RelayerRegistry.getBalanceForRelayer(relayers[0].node)
+        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
         const instance = await ethers.getContractAt(
           'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
@@ -475,7 +478,7 @@ describe('Data and Manager tests', () => {
         await expect(proxyWithRelayer.withdraw(instance.address, result1.proof, ...result1.args)).to.be
           .reverted
 
-        expect(await RelayerRegistry.getBalanceForRelayer(relayers[0].node)).to.equal(initialBalance)
+        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.equal(initialBalance)
 
         const result2 = await generateProof({
           deposit: depo,

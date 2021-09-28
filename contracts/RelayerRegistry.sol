@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
-import { EnsResolve } from "./interfaces/EnsResolve.sol";
+import { EnsResolve, ENS } from "./interfaces/EnsResolve.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 
@@ -16,13 +16,20 @@ interface IENS {
   function owner(bytes32 node) external view returns (address);
 }
 
+struct RelayerIntegerMetadata {
+  uint128 balance;
+  uint128 fee;
+}
+
 struct RelayerMetadata {
-  bool isRegistered;
-  uint248 fee;
+  RelayerIntegerMetadata intData;
+  bytes32 ensHash;
+  mapping(address => bool) addresses;
 }
 
 contract RelayerRegistry is EnsResolve {
   using SafeMath for uint256;
+  using SafeMath for uint128;
 
   address public immutable governance;
 
@@ -32,14 +39,12 @@ contract RelayerRegistry is EnsResolve {
   uint256 public minStakeAmount;
   address public tornadoProxy;
 
-  mapping(bytes32 => uint256) public getBalanceForRelayer;
-  mapping(bytes32 => RelayerMetadata) public getMetadataForRelayer;
-  mapping(address => bytes32) public getRelayerForAddress;
+  mapping(address => RelayerMetadata) public getMetadataForRelayer;
 
-  event RelayerChangedFee(bytes32 indexed relayer, uint248 indexed newFee);
-  event RelayerBalanceNullified(bytes32 indexed relayer);
-  event NewRelayerRegistered(bytes32 indexed relayer, uint248 indexed fee, uint256 indexed stakedAmount);
-  event StakeAddedToRelayer(bytes32 indexed relayer, uint256 indexed amountStakeAdded);
+  event RelayerBalanceNullified(address indexed relayer);
+  event RelayerChangedFee(address indexed relayer, uint248 indexed newFee);
+  event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
+  event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint248 indexed fee, uint256 indexed stakedAmount);
 
   constructor(
     address registryDataAddress,
@@ -61,36 +66,57 @@ contract RelayerRegistry is EnsResolve {
     _;
   }
 
-  modifier onlyRelayer(bytes32 relayer) {
-    require(msg.sender == resolve(relayer), "only relayer");
+  modifier onlyENSOwner(bytes32 node) {
+    require(msg.sender == ENS(ensAddress).owner(node), "only ens owner");
     _;
   }
 
+  modifier onlyRelayer(address relayer) {
+    require(getMetadataForRelayer[relayer].addresses[msg.sender], "only relayer");
+    _;
+  }
+
+  function stakeToRelayer(address relayer, uint128 stake) external {
+    require(getMetadataForRelayer[relayer].addresses[relayer], "!registered");
+    _stakeToRelayer(relayer, stake);
+    getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
+  }
+
   function register(
-    bytes32 ensName,
-    uint256 stake,
-    RelayerMetadata memory metadata
-  ) external onlyRelayer(ensName) {
-    require(!getMetadataForRelayer[ensName].isRegistered, "registered");
-    require(stake.add(getBalanceForRelayer[ensName]) >= minStakeAmount, "!min_stake");
-    if (!metadata.isRegistered) metadata.isRegistered = true;
-    getMetadataForRelayer[ensName] = metadata;
-    getRelayerForAddress[resolve(ensName)] = ensName;
-    stakeToRelayer(ensName, stake);
-    emit NewRelayerRegistered(ensName, metadata.fee, stake);
+    bytes32 ensHash,
+    uint128 fee,
+    uint128 stake,
+    address[] memory toRegister
+  ) external onlyENSOwner(ensHash) {
+    RelayerMetadata storage metadata = getMetadataForRelayer[msg.sender];
+
+    require(metadata.ensHash == bytes32(0), "registered already");
+    require(stake.add(metadata.intData.balance) >= minStakeAmount, "!min_stake");
+
+    _stakeToRelayer(msg.sender, stake);
+
+    metadata.intData = RelayerIntegerMetadata(stake, fee);
+    metadata.addresses[msg.sender] = true;
+    metadata.ensHash = ensHash;
+
+    for (uint256 i = 1; i < toRegister.length + 1; i++) {
+      metadata.addresses[toRegister[i]] = true;
+    }
+
+    emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
   }
 
-  function setRelayerFee(bytes32 ensName, uint256 newFee) external onlyRelayer(ensName) {
-    getMetadataForRelayer[ensName].fee = uint248(newFee);
-    emit RelayerChangedFee(ensName, uint248(newFee));
+  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(relayer) {
+    getMetadataForRelayer[relayer].intData.fee = newFee;
+    emit RelayerChangedFee(relayer, uint128(newFee));
   }
 
-  function burn(address relayer, address poolAddress) external onlyTornadoProxy {
-    bytes32 relayerEnsName = getRelayerForAddress[relayer];
-
-    getBalanceForRelayer[relayerEnsName] = getBalanceForRelayer[relayerEnsName].sub(
-      RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress))
-    );
+  function burn(
+    address sender,
+    address relayer,
+    address poolAddress
+  ) external onlyRelayer(sender) {
+    _burn(relayer, poolAddress);
   }
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
@@ -98,27 +124,40 @@ contract RelayerRegistry is EnsResolve {
   }
 
   function registerProxy(address tornadoProxyAddress) external onlyGovernance {
-    require(tornadoProxy == address(0), "proxy already registered");
     tornadoProxy = tornadoProxyAddress;
   }
 
-  function nullifyBalance(bytes32 relayer) external onlyGovernance {
-    getBalanceForRelayer[relayer] = 0;
+  function nullifyBalance(address relayer) external onlyGovernance {
+    getMetadataForRelayer[relayer].intData.balance = 0;
     emit RelayerBalanceNullified(relayer);
   }
 
-  function getRelayerFee(bytes32 relayer) external view returns (uint256) {
-    return getMetadataForRelayer[relayer].fee;
+  function getRelayerFee(address relayer) external view returns (uint128) {
+    return getMetadataForRelayer[relayer].intData.fee;
   }
 
-  function isRelayerRegistered(bytes32 relayer) external view returns (bool) {
-    return getMetadataForRelayer[relayer].isRegistered;
+  function isRelayerRegistered(address relayer, address toResolve) external view returns (bool) {
+    return getMetadataForRelayer[relayer].addresses[toResolve];
   }
 
-  function stakeToRelayer(bytes32 relayer, uint256 stake) public {
-    require(getMetadataForRelayer[relayer].isRegistered, "!registered");
-    Staking.addStake(resolve(relayer), stake);
-    getBalanceForRelayer[relayer] += stake;
+  function getRelayerEnsHash(address relayer) external view returns (bytes32) {
+    return getMetadataForRelayer[relayer].ensHash;
+  }
+
+  function getRelayerBalance(address relayer) external view returns (uint128) {
+    return getMetadataForRelayer[relayer].intData.balance;
+  }
+
+  function _stakeToRelayer(address relayer, uint256 stake) private {
+    Staking.addStake(relayer, stake);
     emit StakeAddedToRelayer(relayer, stake);
+  }
+
+  function _burn(address relayer, address poolAddress) private onlyTornadoProxy {
+    getMetadataForRelayer[relayer].intData.balance = uint128(
+      getMetadataForRelayer[relayer].intData.balance.sub(
+        uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)))
+      )
+    );
   }
 }

@@ -67,7 +67,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     RelayerRegistryData RegistryData = Registry.RegistryData();
 
     RegistryData.setProtocolFee(1e15);
-    RegistryData.setProtocolPeriod(5400);
+    RegistryData.setPeriodForTWAPOracle(5400);
 
     Staking.setDistributionPeriod(180 days);
 

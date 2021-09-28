@@ -4,6 +4,8 @@ pragma solidity ^0.6.12;
 
 interface ENS {
   function resolver(bytes32 node) external view returns (Resolver);
+
+  function owner(bytes32 node) external view returns (address);
 }
 
 interface Resolver {
