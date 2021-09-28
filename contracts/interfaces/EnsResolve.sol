@@ -11,7 +11,9 @@ interface Resolver {
 }
 
 contract EnsResolve {
+  address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
+
   function resolve(bytes32 node) public view virtual returns (address) {
-    return ENS(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e).resolver(node).addr(node);
+    return ENS(ensAddress).resolver(node).addr(node);
   }
 }

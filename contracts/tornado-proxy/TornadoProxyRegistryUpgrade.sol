@@ -6,9 +6,7 @@ pragma experimental ABIEncoderV2;
 import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
 interface IRelayerRegistry {
-  function burn(bytes32 relayer, address poolAddress) external;
-
-  function getRelayerForAddress(address relayer) external returns (bytes32);
+  function burn(address relayer, address poolAddress) external;
 }
 
 contract TornadoProxyRegistryUpgrade is TornadoProxy {
@@ -33,14 +31,8 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     uint256 _fee,
     uint256 _refund
   ) public payable virtual override {
-    if (_relayer != address(0)) Registry.burn(Registry.getRelayerForAddress(_relayer), address(_tornado));
+    if (_relayer != address(0)) Registry.burn(_relayer, address(_tornado));
 
-    Instance memory instance = instances[_tornado];
-    require(instance.state != InstanceState.DISABLED, "The instance is not supported");
-
-    _tornado.withdraw{ value: msg.value }(_proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
-    if (instance.state == InstanceState.MINEABLE) {
-      tornadoTrees.registerWithdrawal(address(_tornado), _nullifierHash);
-    }
+    super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }
 }

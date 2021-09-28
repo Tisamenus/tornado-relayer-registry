@@ -71,19 +71,17 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     Staking.setDistributionPeriod(180 days);
 
-    Registry.setMinStakeAmount(1e20);
+    Registry.setMinStakeAmount(100 ether);
 
-    require(disableOldProxy());
+    disableOldProxy();
   }
 
-  function disableOldProxy() private returns (bool) {
+  function disableOldProxy() private {
     TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
     TornadoProxy.Tornado[] memory Instances = InstancesData.getInstances();
 
     for (uint256 i = 0; i < Instances.length; i++) {
       oldProxy.updateInstance(Instances[i]);
     }
-
-    return true;
   }
 }

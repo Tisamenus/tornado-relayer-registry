@@ -41,7 +41,7 @@ contract TornadoStakingRewards {
   }
 
   modifier onlyGovernance() {
-    require(msg.sender == address(governance));
+    require(msg.sender == address(governance), "only governance");
     _;
   }
 

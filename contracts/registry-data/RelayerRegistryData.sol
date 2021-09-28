@@ -16,7 +16,8 @@ contract RelayerRegistryData {
 
   GlobalPoolData public protocolPoolData;
 
-  uint256 public lastFeeUpdateTimestamp;
+  event FeesUpdated(uint256 indexed timestamp);
+  event FeeUpdated(uint256 indexed timestamp, uint256 indexed poolId);
 
   constructor(
     address dataManagerProxy,
@@ -34,13 +35,8 @@ contract RelayerRegistryData {
   }
 
   modifier onlyGovernance() {
-    require(msg.sender == governance);
+    require(msg.sender == governance, "only governance");
     _;
-  }
-
-  function updateAllFeesWithTimestampStore() external {
-    lastFeeUpdateTimestamp = block.timestamp;
-    updateAllFees();
   }
 
   function updateFeesOfPools(uint256[] memory poolIds) external {
@@ -70,6 +66,7 @@ contract RelayerRegistryData {
 
   function updateAllFees() public {
     getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, protocolPoolData);
+    emit FeesUpdated(block.timestamp);
   }
 
   function updateFeeOfPool(uint256 poolId) public {
@@ -78,5 +75,6 @@ contract RelayerRegistryData {
       protocolPoolData,
       poolId
     );
+    emit FeeUpdated(block.timestamp, poolId);
   }
 }
