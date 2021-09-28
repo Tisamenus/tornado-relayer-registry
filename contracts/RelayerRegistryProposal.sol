@@ -17,10 +17,12 @@ import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
+import { TornadoTrees } from "tornado-trees/contracts/TornadoTrees.sol";
+
 contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   using SafeMath for uint256;
 
-  address public constant GovernanceVesting = 0x179f48C78f57A3A78f0608cC9197B8972921d1D2;
+  address public constant TornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
   RelayerRegistry public immutable Registry;
@@ -60,12 +62,14 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     Registry.registerProxy(newTornadoProxy);
 
+    TornadoTrees(TornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
+
     RelayerRegistryData RegistryData = Registry.RegistryData();
 
     RegistryData.setProtocolFee(1e15);
     RegistryData.setProtocolPeriod(5400);
 
-    Staking.setDistributionPeriod(365 days);
+    Staking.setDistributionPeriod(180 days);
 
     Registry.setMinStakeAmount(1e20);
 

@@ -53,7 +53,7 @@ contract TornadoStakingRewards {
 
     rewardsDurationData.push(RewardsDurationData(uint128(dRate), uint128(block.timestamp.add(period))));
 
-    _updateRewardsState(oldRewardRate);
+    _updateRewardsState(oldRewardRate, lastActivityTimestamp, totalCollectedShareValue, lockedAmount.mul(distributionPeriod));
 
     rewardRate = oldRewardRate.add(dRate);
   }
@@ -83,7 +83,12 @@ contract TornadoStakingRewards {
     address recipient,
     uint256 amountLockedBeforehand
   ) private returns (uint256 claimed, bool transferSuccess) {
-    uint256 newTotalCollectedShareValue = _updateRewardsState(rewardRate);
+    uint256 newTotalCollectedShareValue = _updateRewardsState(
+      rewardRate,
+      lastActivityTimestamp,
+      totalCollectedShareValue,
+      lockedAmount.mul(distributionPeriod)
+    );
 
     claimed = (newTotalCollectedShareValue.sub(collectedAfterAccountInteraction[account])).mul(amountLockedBeforehand).div(
       ratioConstant
@@ -94,14 +99,18 @@ contract TornadoStakingRewards {
     transferSuccess = TORN.transfer(recipient, claimed);
   }
 
-  function _updateRewardsState(uint256 oldRewardRate) private returns (uint256) {
-    uint256 newTotalCollectedShareValue = totalCollectedShareValue;
-    uint256 divisor = lockedAmount.mul(distributionPeriod);
-    uint256 lastTimestamp = lastActivityTimestamp;
+  function _updateRewardsState(
+    uint256 oldRewardRate,
+    uint256 lastTimestamp,
+    uint256 newTotalCollectedShareValue,
+    uint256 divisor
+  ) private returns (uint256) {
+    RewardsDurationData memory durationData;
 
-    RewardsDurationData memory durationData = rewardsDurationData[periodIndex];
+    if (periodIndex < rewardsDurationData.length) durationData = rewardsDurationData[periodIndex];
+    else durationData.endTimestamp = type(uint128).max;
 
-    if (block.timestamp >= durationData.endTimestamp) {
+    if (block.timestamp > durationData.endTimestamp) {
       periodIndex++;
 
       newTotalCollectedShareValue = newTotalCollectedShareValue.add(
@@ -110,6 +119,10 @@ contract TornadoStakingRewards {
       lastTimestamp = durationData.endTimestamp;
 
       oldRewardRate = oldRewardRate.sub(durationData.rewardRateChange);
+
+      if (periodIndex < rewardsDurationData.length && block.timestamp >= rewardsDurationData[periodIndex].endTimestamp)
+        return _updateRewardsState(oldRewardRate, lastTimestamp, newTotalCollectedShareValue, divisor);
+
       rewardRate = oldRewardRate;
     }
 

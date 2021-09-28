@@ -8803,7 +8803,7 @@ torn-token@^1.0.0:
     ethereumjs-util "^7.0.3"
     web3 "^1.2.11"
 
-tornado-anonymity-mining@2.1.5:
+tornado-anonymity-mining@^2.1.5:
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/tornado-anonymity-mining/-/tornado-anonymity-mining-2.1.5.tgz#7dbc7f099ce9667f2cc91fbb7ce8f78663afc4cc"
   integrity sha512-hYXKHyPs7nqpGjPgWpuBJrnDSTZ4FifU8Mv/ujueYXVOzkcL64ZOq30JFDE6ANQ7D09AhD7B7pSx/Odgn+nlgw==

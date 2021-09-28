@@ -34,9 +34,10 @@
     "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.6",
-    "tornado-anonymity-mining": "2.1.5",
+    "tornado-anonymity-mining": "^2.1.5",
     "tornado-cli": "^0.0.1",
-    "tornado-governance": "^1.0.1"
+    "tornado-governance": "^1.0.1",
+    "tornado-trees": "^0.0.11"
   },
   "devDependencies": {
     "@ethersproject/testcases": "^5.4.0",

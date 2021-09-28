@@ -131,7 +131,7 @@ describe('Data and Manager tests', () => {
       const Instance = {
         isERC20: i > 3,
         token: token_addresses[poolTokens[i]],
-        state: 1,
+        state: 2,
       }
       const Tornado = {
         addr: tornadoPools[i],
@@ -258,7 +258,7 @@ describe('Data and Manager tests', () => {
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
         expect(await StakingContract.distributionPeriod()).to.equal(
-          ethers.utils.parseUnits('86400', 'wei').mul(BigNumber.from(365)),
+          ethers.utils.parseUnits('86400', 'wei').mul(BigNumber.from(180)),
         )
         expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
       })
@@ -317,6 +317,8 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
+          await minewait(86400 * 10) // delay so we can test further below
+
           await registry.register(relayers[i].node, ethers.utils.parseEther('101'), metadata)
 
           console.log(
@@ -368,9 +370,9 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should properly harvest rewards if someone calls unlock', async function () {
-        const initialBalance = (await Governance.lockedBalance(signerArray[1].address)).toString()
+        const initialBalance = (await Governance.lockedBalance(signerArray[0].address)).toString()
 
-        const gov = await Governance.connect(signerArray[1])
+        const gov = await Governance.connect(signerArray[0])
 
         console.log('Timestamp: ', await timestamp())
 
@@ -380,7 +382,7 @@ describe('Data and Manager tests', () => {
 
         await gov.unlock(initialBalance)
 
-        expect(await Governance.lockedBalance(signerArray[1].address)).to.equal(0)
+        expect(await Governance.lockedBalance(signerArray[0].address)).to.equal(0)
       })
     })
 
@@ -484,6 +486,30 @@ describe('Data and Manager tests', () => {
         await expect(() =>
           proxy.withdraw(instance.address, result2.proof, ...result2.args),
         ).to.changeTokenBalance(daiToken, daiWhale, await instance.denomination())
+      })
+    })
+
+    describe('Test locking into with a few accounts after duration period passed for a couple of relayers', () => {
+      it('Should not revert, properly increment balances', async () => {
+        const initialBalances = []
+        const govs = []
+
+        for (let i = 1; i < 3; i++) {
+          initialBalances[i] = (await Governance.lockedBalance(signerArray[i].address)).toString()
+          govs[i] = await Governance.connect(signerArray[i])
+        }
+
+        console.log('Timestamp: ', await timestamp())
+
+        await minewait(86400 * 180)
+
+        console.log('Timestamp: ', await timestamp())
+
+        for (let i = 1; i < 3; i++) {
+          await minewait(86400 * 10)
+          await govs[i].lockWithApproval(0)
+          expect(await Governance.lockedBalance(signerArray[i].address)).to.be.gt(initialBalances[i])
+        }
       })
     })
   })
