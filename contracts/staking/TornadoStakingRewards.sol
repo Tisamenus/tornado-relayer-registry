@@ -53,7 +53,13 @@ contract TornadoStakingRewards {
 
     rewardsDurationData.push(RewardsDurationData(uint128(dRate), uint128(block.timestamp.add(period))));
 
-    _updateRewardsState(oldRewardRate, lastActivityTimestamp, totalCollectedShareValue, lockedAmount.mul(distributionPeriod));
+    _updateRewardsState(
+      oldRewardRate,
+      lastActivityTimestamp,
+      totalCollectedShareValue,
+      lockedAmount.mul(distributionPeriod),
+      periodIndex
+    );
 
     rewardRate = oldRewardRate.add(dRate);
   }
@@ -87,7 +93,8 @@ contract TornadoStakingRewards {
       rewardRate,
       lastActivityTimestamp,
       totalCollectedShareValue,
-      lockedAmount.mul(distributionPeriod)
+      lockedAmount.mul(distributionPeriod),
+      periodIndex
     );
 
     claimed = (newTotalCollectedShareValue.sub(collectedAfterAccountInteraction[account])).mul(amountLockedBeforehand).div(
@@ -103,35 +110,38 @@ contract TornadoStakingRewards {
     uint256 oldRewardRate,
     uint256 lastTimestamp,
     uint256 newTotalCollectedShareValue,
-    uint256 divisor
+    uint256 cachedDivisor,
+    uint256 cachedPeriodIndex
   ) private returns (uint256) {
     RewardsDurationData memory durationData;
 
-    if (periodIndex < rewardsDurationData.length) durationData = rewardsDurationData[periodIndex];
+    if (cachedPeriodIndex < rewardsDurationData.length) durationData = rewardsDurationData[cachedPeriodIndex];
     else durationData.endTimestamp = type(uint128).max;
 
     if (block.timestamp > durationData.endTimestamp) {
-      periodIndex++;
+      cachedPeriodIndex++;
 
       newTotalCollectedShareValue = newTotalCollectedShareValue.add(
-        oldRewardRate.mul(ratioConstant).mul(uint256(durationData.endTimestamp).sub(lastTimestamp)).div(divisor)
+        oldRewardRate.mul(ratioConstant).mul(uint256(durationData.endTimestamp).sub(lastTimestamp)).div(cachedDivisor)
       );
       lastTimestamp = durationData.endTimestamp;
 
       oldRewardRate = oldRewardRate.sub(durationData.rewardRateChange);
 
-      if (periodIndex < rewardsDurationData.length && block.timestamp >= rewardsDurationData[periodIndex].endTimestamp)
-        return _updateRewardsState(oldRewardRate, lastTimestamp, newTotalCollectedShareValue, divisor);
+      if (
+        cachedPeriodIndex < rewardsDurationData.length && block.timestamp >= rewardsDurationData[cachedPeriodIndex].endTimestamp
+      ) return _updateRewardsState(oldRewardRate, lastTimestamp, newTotalCollectedShareValue, cachedDivisor, cachedPeriodIndex);
 
       rewardRate = oldRewardRate;
     }
 
     newTotalCollectedShareValue = newTotalCollectedShareValue.add(
-      oldRewardRate.mul(ratioConstant).mul(block.timestamp.sub(lastTimestamp)).div(divisor)
+      oldRewardRate.mul(ratioConstant).mul(block.timestamp.sub(lastTimestamp)).div(cachedDivisor)
     );
 
     totalCollectedShareValue = newTotalCollectedShareValue;
     lastActivityTimestamp = block.timestamp;
+    periodIndex = cachedPeriodIndex;
 
     return newTotalCollectedShareValue;
   }

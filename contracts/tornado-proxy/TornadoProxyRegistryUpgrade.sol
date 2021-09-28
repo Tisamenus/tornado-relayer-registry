@@ -6,7 +6,11 @@ pragma experimental ABIEncoderV2;
 import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
 interface IRelayerRegistry {
-  function burn(address relayer, address poolAddress) external;
+  function burn(
+    address sender,
+    address relayer,
+    address poolAddress
+  ) external;
 }
 
 contract TornadoProxyRegistryUpgrade is TornadoProxy {
@@ -31,7 +35,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     uint256 _fee,
     uint256 _refund
   ) public payable virtual override {
-    if (_relayer != address(0)) Registry.burn(_relayer, address(_tornado));
+    if (_relayer != address(0)) Registry.burn(msg.sender, _relayer, address(_tornado));
 
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }

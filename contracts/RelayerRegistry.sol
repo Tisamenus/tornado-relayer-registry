@@ -4,7 +4,6 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
-import { EnsResolve, ENS } from "./interfaces/EnsResolve.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 
@@ -27,10 +26,11 @@ struct RelayerMetadata {
   mapping(address => bool) addresses;
 }
 
-contract RelayerRegistry is EnsResolve {
+contract RelayerRegistry {
   using SafeMath for uint256;
   using SafeMath for uint128;
 
+  address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
   address public immutable governance;
 
   ITornadoStakingRewards public immutable Staking;
@@ -67,12 +67,12 @@ contract RelayerRegistry is EnsResolve {
   }
 
   modifier onlyENSOwner(bytes32 node) {
-    require(msg.sender == ENS(ensAddress).owner(node), "only ens owner");
+    require(msg.sender == IENS(ensAddress).owner(node), "only ens owner");
     _;
   }
 
-  modifier onlyRelayer(address relayer) {
-    require(getMetadataForRelayer[relayer].addresses[msg.sender], "only relayer");
+  modifier onlyRelayer(address sender, address relayer) {
+    require(getMetadataForRelayer[relayer].addresses[sender], "only relayer");
     _;
   }
 
@@ -99,14 +99,14 @@ contract RelayerRegistry is EnsResolve {
     metadata.addresses[msg.sender] = true;
     metadata.ensHash = ensHash;
 
-    for (uint256 i = 1; i < toRegister.length + 1; i++) {
+    for (uint256 i = 0; i < toRegister.length; i++) {
       metadata.addresses[toRegister[i]] = true;
     }
 
     emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
   }
 
-  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(relayer) {
+  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
     getMetadataForRelayer[relayer].intData.fee = newFee;
     emit RelayerChangedFee(relayer, uint128(newFee));
   }
@@ -115,7 +115,7 @@ contract RelayerRegistry is EnsResolve {
     address sender,
     address relayer,
     address poolAddress
-  ) external onlyRelayer(sender) {
+  ) external onlyRelayer(sender, relayer) {
     _burn(relayer, poolAddress);
   }
 

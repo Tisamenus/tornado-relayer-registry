@@ -45,20 +45,20 @@ contract RegistryDataManager {
     GlobalPoolData memory globalPoolData,
     uint256 isEtherIndex
   ) public view returns (uint256 newFee) {
-    address token = ERC20Tornado(poolData.addressData).token();
-
-    newFee = (isEtherIndex > 3)
-      ? IERC20(token).balanceOf(poolData.addressData).mul(1e18).div(
+    if (isEtherIndex > 3) {
+      address token = ERC20Tornado(poolData.addressData).token();
+      newFee = IERC20(token).balanceOf(poolData.addressData).mul(1e18).div(
         UniswapV3OracleHelper.getPriceRatioOfTokens(
           [torn, token],
           [uniPoolFeeTorn, uint24(poolData.uniPoolFee)],
           uint32(globalPoolData.globalPeriod)
         )
-      )
-      : poolData.addressData.balance.mul(1e18).div(
+      );
+    } else {
+      newFee = poolData.addressData.balance.mul(1e18).div(
         UniswapV3OracleHelper.getPriceOfTokenInWETH(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
       );
-
+    }
     newFee = newFee.mul(uint256(globalPoolData.protocolFee)).div(1e18);
   }
 }

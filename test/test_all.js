@@ -331,7 +331,8 @@ describe('Data and Manager tests', () => {
             (await StakingContract.lockedAmount()).toString(),
           )
 
-          expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address)).to.be.true
+          expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
+            .true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].address)).to.equal(fee)
         }
       })
