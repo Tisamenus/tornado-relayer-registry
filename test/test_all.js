@@ -82,10 +82,6 @@ describe('Data and Manager tests', () => {
     await ethers.provider.send('evm_mine', [])
   }
 
-  let timestamp = async () => {
-    return (await ethers.provider.getBlock('latest')).timestamp
-  }
-
   before(async function () {
     signerArray = await ethers.getSigners()
 
@@ -125,7 +121,12 @@ describe('Data and Manager tests', () => {
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
-    RelayerRegistry = await RegistryFactory.deploy(RegistryData.address, governance, StakingContract.address)
+    RelayerRegistry = await RegistryFactory.deploy(
+      RegistryData.address,
+      governance,
+      StakingContract.address,
+      torn,
+    )
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
@@ -185,6 +186,25 @@ describe('Data and Manager tests', () => {
           await expect(() =>
             erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000')),
           ).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
+        }
+      })
+
+      it('Accounts should successfully lock into governance', async () => {
+        let gov = await ethers.getContractAt(
+          'tornado-governance/contracts/Governance.sol:Governance',
+          governance,
+        )
+        let Torn = await getToken(torn)
+
+        for (let i = 0; i < 3; i++) {
+          Torn = await Torn.connect(signerArray[i])
+          await Torn.approve(gov.address, ethers.utils.parseEther('20000000'))
+          gov = await gov.connect(signerArray[i])
+          await expect(() => gov.lockWithApproval(ethers.utils.parseEther('5000'))).to.changeTokenBalance(
+            Torn,
+            signerArray[i],
+            BigNumber.from(0).sub(ethers.utils.parseEther('5000')),
+          )
         }
       })
 
@@ -257,9 +277,6 @@ describe('Data and Manager tests', () => {
         expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
-        expect(await StakingContract.distributionPeriod()).to.equal(
-          ethers.utils.parseUnits('86400', 'wei').mul(BigNumber.from(180)),
-        )
         expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
       })
 
@@ -313,7 +330,7 @@ describe('Data and Manager tests', () => {
         for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
             .connect(relayers[i].wallet)
-            .approve(StakingContract.address, ethers.utils.parseEther('300'))
+            .approve(RelayerRegistry.address, ethers.utils.parseEther('300'))
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
@@ -323,69 +340,10 @@ describe('Data and Manager tests', () => {
             `${relayers[i].address}`,
           ])
 
-          console.log(
-            'Share price: ',
-            (await StakingContract.totalCollectedShareValue()).toString(),
-            ', staked amount: ',
-            (await StakingContract.lockedAmount()).toString(),
-          )
-
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
           expect(await RelayerRegistry.getRelayerFee(relayers[i].address)).to.equal(fee)
         }
-      })
-    })
-
-    describe('Test registry staking', () => {
-      it('Accounts locking balances should cause rebase of share price', async function () {
-        const sharePrice = await StakingContract.totalCollectedShareValue()
-        const k5 = ethers.utils.parseEther('5000')
-
-        let lockedAmount = await StakingContract.lockedAmount()
-        let newSharePrice = sharePrice.mul(lockedAmount).div(lockedAmount.add(k5))
-
-        for (let i = 0; i < 3; i++) {
-          const TORN = await (await getToken(torn)).connect(signerArray[i])
-          await TORN.approve(governance, ethers.utils.parseEther('200000000'))
-          const gov = await Governance.connect(signerArray[i])
-          await gov.lockWithApproval(k5)
-          expect(await StakingContract.totalCollectedShareValue()).to.be.gt(sharePrice)
-          lockedAmount = await StakingContract.lockedAmount()
-          newSharePrice = newSharePrice.mul(lockedAmount).div(lockedAmount.add(k5))
-        }
-      })
-
-      it('Should properly harvest rewards if someone calls lockWithApproval(0)', async function () {
-        const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString()
-
-        const gov = await Governance.connect(signerArray[2])
-
-        console.log('Timestamp: ', await timestamp())
-
-        await minewait(86400 * 3)
-
-        console.log('Timestamp: ', await timestamp())
-
-        await gov.lockWithApproval(0)
-
-        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance)
-      })
-
-      it('Should properly harvest rewards if someone calls unlock', async function () {
-        const initialBalance = (await Governance.lockedBalance(signerArray[0].address)).toString()
-
-        const gov = await Governance.connect(signerArray[0])
-
-        console.log('Timestamp: ', await timestamp())
-
-        await minewait(86400 * 3)
-
-        console.log('Timestamp: ', await timestamp())
-
-        await gov.unlock(initialBalance)
-
-        expect(await Governance.lockedBalance(signerArray[0].address)).to.equal(0)
       })
     })
 
@@ -394,6 +352,7 @@ describe('Data and Manager tests', () => {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
+        const initialShareValue = await StakingContract.totalCollectedShareValue()
         const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
         const instance = await ethers.getContractAt(
@@ -435,6 +394,7 @@ describe('Data and Manager tests', () => {
         )
 
         expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
+        expect(await StakingContract.totalCollectedShareValue()).to.be.gt(initialShareValue)
       })
 
       it('This time around relayer should not have enough funds for withdrawal', async function () {
@@ -492,27 +452,27 @@ describe('Data and Manager tests', () => {
       })
     })
 
-    describe('Test locking into with a few accounts after duration period passed for a couple of relayers', () => {
-      it('Should not revert, properly increment balances', async () => {
-        const initialBalances = []
-        const govs = []
+    describe('Test registry staking', () => {
+      it('Should properly harvest rewards if someone calls lockWithApproval(0)', async function () {
+        const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString()
 
-        for (let i = 1; i < 3; i++) {
-          initialBalances[i] = (await Governance.lockedBalance(signerArray[i].address)).toString()
-          govs[i] = await Governance.connect(signerArray[i])
-        }
+        const gov = await Governance.connect(signerArray[2])
 
-        console.log('Timestamp: ', await timestamp())
+        await gov.lockWithApproval(0)
 
-        await minewait(86400 * 180)
+        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance)
+      })
 
-        console.log('Timestamp: ', await timestamp())
+      it('Should properly harvest rewards if someone calls unlock', async function () {
+        const Torn = await getToken(torn)
 
-        for (let i = 1; i < 3; i++) {
-          await minewait(86400 * 10)
-          await govs[i].lockWithApproval(0)
-          expect(await Governance.lockedBalance(signerArray[i].address)).to.be.gt(initialBalances[i])
-        }
+        const initialBalance = await Torn.balanceOf(signerArray[0].address)
+
+        const gov = await Governance.connect(signerArray[0])
+
+        await gov.unlock(0)
+
+        expect(await Torn.balanceOf(signerArray[0].address)).to.be.gt(initialBalance)
       })
     })
   })

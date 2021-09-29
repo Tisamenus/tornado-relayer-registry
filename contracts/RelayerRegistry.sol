@@ -8,7 +8,7 @@ import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
 
 interface ITornadoStakingRewards {
-  function addStake(address sender, uint256 tornAmount) external;
+  function addBurnRewards(uint256 amount) external;
 }
 
 interface IENS {
@@ -33,6 +33,8 @@ contract RelayerRegistry {
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
   address public immutable governance;
 
+  IERC20 public immutable torn;
+
   ITornadoStakingRewards public immutable Staking;
   RelayerRegistryData public immutable RegistryData;
 
@@ -49,11 +51,13 @@ contract RelayerRegistry {
   constructor(
     address registryDataAddress,
     address tornadoGovernance,
-    address stakingAddress
+    address stakingAddress,
+    address tornTokenAddress
   ) public {
     RegistryData = RelayerRegistryData(registryDataAddress);
     governance = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
+    torn = IERC20(tornTokenAddress);
   }
 
   modifier onlyGovernance() {
@@ -116,11 +120,9 @@ contract RelayerRegistry {
     address relayer,
     address poolAddress
   ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
-    getMetadataForRelayer[relayer].intData.balance = uint128(
-      getMetadataForRelayer[relayer].intData.balance.sub(
-        uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)))
-      )
-    );
+    uint128 toBurn = uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)));
+    getMetadataForRelayer[relayer].intData.balance = uint128(getMetadataForRelayer[relayer].intData.balance.sub(toBurn));
+    Staking.addBurnRewards(toBurn);
   }
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
@@ -153,7 +155,7 @@ contract RelayerRegistry {
   }
 
   function _stakeToRelayer(address relayer, uint256 stake) private {
-    Staking.addStake(relayer, stake);
+    require(torn.transferFrom(relayer, address(Staking), stake), "transfer failed");
     emit StakeAddedToRelayer(relayer, stake);
   }
 }

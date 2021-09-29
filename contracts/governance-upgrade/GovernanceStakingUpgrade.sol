@@ -13,6 +13,7 @@ interface ITornadoStakingRewards {
   ) external returns (uint256, bool);
 
   function updateLockedAmountOnLock(uint256 amount) external;
+
   function updateLockedAmountOnUnlock(uint256 amount) external;
 }
 

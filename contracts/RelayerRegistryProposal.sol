@@ -66,7 +66,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     RegistryData.setProtocolFee(1e15);
     RegistryData.setPeriodForTWAPOracle(5400);
 
-    Staking.setDistributionPeriod(180 days);
+    Staking.registerRelayerRegistry(address(Registry));
 
     Registry.setMinStakeAmount(100 ether);
 
