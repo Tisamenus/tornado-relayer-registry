@@ -4,9 +4,9 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
-import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
-import { Initializable } from "@openzeppelin/0.6.x/proxy/Initializable.sol";
+import { SafeMath } from "@openzeppelin/0.6/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/0.6/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/0.6/proxy/Initializable.sol";
 
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;
@@ -82,7 +82,8 @@ contract RelayerRegistry is Initializable {
 
   function stakeToRelayer(address relayer, uint128 stake) external {
     require(getMetadataForRelayer[relayer].addresses[relayer], "!registered");
-    _stakeToRelayer(relayer, stake);
+    _sendStakeToStaking(msg.sender, stake);
+    emit StakeAddedToRelayer(relayer, stake);
     getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
   }
 
@@ -97,7 +98,8 @@ contract RelayerRegistry is Initializable {
     require(metadata.ensHash == bytes32(0), "registered already");
     require(stake.add(metadata.intData.balance) >= minStakeAmount, "!min_stake");
 
-    _stakeToRelayer(msg.sender, stake);
+    _sendStakeToStaking(msg.sender, stake);
+    emit StakeAddedToRelayer(msg.sender, stake);
 
     metadata.intData = RelayerIntegerMetadata(stake, fee);
     metadata.addresses[msg.sender] = true;
@@ -154,8 +156,7 @@ contract RelayerRegistry is Initializable {
     return getMetadataForRelayer[relayer].intData.balance;
   }
 
-  function _stakeToRelayer(address relayer, uint256 stake) private {
-    require(torn.transferFrom(relayer, address(Staking), stake), "transfer failed");
-    emit StakeAddedToRelayer(relayer, stake);
+  function _sendStakeToStaking(address sender, uint256 stake) private {
+    require(torn.transferFrom(sender, address(Staking), stake), "transfer failed");
   }
 }

@@ -11,10 +11,6 @@ interface ITornadoStakingRewards {
     address recipient,
     uint256 amountLockedBeforehand
   ) external returns (uint256, bool);
-
-  function updateLockedAmountOnLock(uint256 amount) external;
-
-  function updateLockedAmountOnUnlock(uint256 amount) external;
 }
 
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
@@ -43,7 +39,6 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(owner, amount);
 
     if (success) lockedBalance[owner] = lockedBalance[owner].add(claimed);
-    Staking.updateLockedAmountOnLock(amount.add(claimed));
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
@@ -53,7 +48,6 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(msg.sender, amount);
 
     if (success) lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
-    Staking.updateLockedAmountOnLock(amount.add(claimed));
   }
 
   function unlock(uint256 amount) external virtual override {
@@ -62,7 +56,5 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
     userVault.withdrawTorn(msg.sender, amount);
-
-    Staking.updateLockedAmountOnUnlock(amount);
   }
 }

@@ -7,7 +7,7 @@
       "hash": "0x0798408660f840ee3d6b39ec0f1e2ed9abb91cbf578a7fbaa9dba8c5b99f51b2",
       "type": 2,
       "accessList": [],
-      "blockHash": "0xefab9eab2b247855ff53dd1ee803e3bb31bbbf80cdb7391efe1026e44536ecf2",
+      "blockHash": "0x2412d5cc95829a102596718ddf270daab49cb64e27895936c554c4498985990d",
       "blockNumber": 13327016,
       "transactionIndex": 0,
       "confirmations": 1,
@@ -161,17 +161,9 @@
         }
       }
     },
-    "4915c2f65d57b5079b461b10bc369559f177a1f64386236a005f133541559499": {
-      "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-      "txHash": "0xfb0e3db1ded0c287f38c5c2bec77317caf123ffa1c9daea68799487d9e4cae3e",
-      "layout": {
-        "storage": [],
-        "types": {}
-      }
-    },
-    "169e5b64a5154415ddc0d2ab153696e4da183e6c4ca1938fca465169f97eacc8": {
+    "e38c58f155e9212ce7ed853daf8b26029f2dd6066b0ac95b230e3a7644b6b036": {
       "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-      "txHash": "0xded0efb7c177d2744ff3b638ff9ec4e77fd355688535bdbe8f104285d2768f61",
+      "txHash": "0xd9662ef86710ad7b1d00232bddd88a193313ab42ce09ec8c946cd035f58aecc4",
       "layout": {
         "storage": [
           {
@@ -213,7 +205,7 @@
           {
             "contract": "RelayerRegistry",
             "label": "RegistryData",
-            "type": "t_contract(RelayerRegistryData)6034",
+            "type": "t_contract(RelayerRegistryData)6007",
             "src": "contracts/RelayerRegistry.sol:39"
           },
           {
@@ -245,7 +237,7 @@
           "t_contract(ITornadoStakingRewards)4276": {
             "label": "contract ITornadoStakingRewards"
           },
-          "t_contract(RelayerRegistryData)6034": {
+          "t_contract(RelayerRegistryData)6007": {
             "label": "contract RelayerRegistryData"
           },
           "t_uint256": {
@@ -300,6 +292,14 @@
             "label": "uint256[50]"
           }
         }
+      }
+    },
+    "4915c2f65d57b5079b461b10bc369559f177a1f64386236a005f133541559499": {
+      "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
+      "txHash": "0x2cbafaabc4e70e9a35f071152c36801532c2af4e9fa90367e2774d3721287ed8",
+      "layout": {
+        "storage": [],
+        "types": {}
       }
     }
   }

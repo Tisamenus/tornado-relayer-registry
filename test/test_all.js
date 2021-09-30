@@ -19,6 +19,8 @@ describe('Data and Manager tests', () => {
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
 
+  let approxVaultBalance = ethers.utils.parseUnits('13893131191552333230524', 'wei')
+
   //// LIBRARIES
   let OracleHelperLibrary
   let OracleHelperFactory
@@ -72,7 +74,7 @@ describe('Data and Manager tests', () => {
   }
 
   let getToken = async (tokenAddress) => {
-    return await ethers.getContractAt('@openzeppelin/0.6.x/token/ERC20/IERC20.sol:IERC20', tokenAddress)
+    return await ethers.getContractAt('@openzeppelin/0.6/token/ERC20/IERC20.sol:IERC20', tokenAddress)
   }
 
   let erc20Transfer = async (tokenAddress, senderWallet, recipientAddress, amount) => {
@@ -96,6 +98,7 @@ describe('Data and Manager tests', () => {
         UniswapV3OracleHelper: OracleHelperLibrary.address,
       },
     })
+
     DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, {
       unsafeAllow: ['external-library-linking'],
     })
@@ -115,15 +118,9 @@ describe('Data and Manager tests', () => {
     MockVault = await MockVaultFactory.deploy()
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
-
-    StakingContract = await StakingFactory.deploy(
-      governance,
-      torn,
-      ethers.utils.parseUnits('13893131191552333230524', 'wei'),
-    )
+    StakingContract = await StakingFactory.deploy(governance, torn)
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
-
     RelayerRegistry = await upgrades.deployProxy(RegistryFactory, {
       initializer: false,
     })
@@ -191,6 +188,19 @@ describe('Data and Manager tests', () => {
       it('Should successfully imitate a torn whale', async function () {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
         tornWhale = await ethers.getSigner('0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3')
+      })
+
+      it('Should successfully imitate governance to transfer torn to vault,\n since we do this in the former proposal', async () => {
+        await sendr('hardhat_impersonateAccount', [Governance.address])
+        await sendr('hardhat_setBalance', [Governance.address, '0xDE0B6B3A7640000'])
+        const impGov = await ethers.getSigner(Governance.address)
+        const govTorn = (await await getToken(torn)).connect(impGov)
+
+        await expect(() => govTorn.transfer(MockVault.address, approxVaultBalance)).to.changeTokenBalance(
+          await getToken(torn),
+          MockVault,
+          approxVaultBalance,
+        )
       })
 
       it('Should successfully distribute torn to default accounts', async function () {
@@ -364,7 +374,7 @@ describe('Data and Manager tests', () => {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
-        const initialShareValue = await StakingContract.totalCollectedShareValue()
+        const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
         const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
         const instance = await ethers.getContractAt(
@@ -406,7 +416,7 @@ describe('Data and Manager tests', () => {
         )
 
         expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
-        expect(await StakingContract.totalCollectedShareValue()).to.be.gt(initialShareValue)
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
       })
 
       it('This time around relayer should not have enough funds for withdrawal', async function () {
@@ -485,6 +495,39 @@ describe('Data and Manager tests', () => {
         await gov.unlock(0)
 
         expect(await Torn.balanceOf(signerArray[0].address)).to.be.gt(initialBalance)
+      })
+
+      it('Second harvest shouldnt work if no withdraw was made', async () => {
+        const Torn = await getToken(torn)
+
+        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
+
+        let gov = await Governance.connect(signerArray[0])
+        await gov.unlock(0)
+        gov = await Governance.connect(signerArray[1])
+        await gov.unlock(0)
+
+        expect(await Torn.balanceOf(signerArray[0].address)).to.be.equal(initialBalance0)
+        expect(await Torn.balanceOf(signerArray[2].address)).to.be.equal(initialBalance1)
+      })
+    })
+
+    describe('Test staking to relayer', () => {
+      it('Should be able to withdraw some torn from governance and stake to a relayer', async () => {
+        const gov = await Governance.connect(signerArray[0])
+        const k1 = ethers.utils.parseEther('1000')
+        const Torn = (await getToken(torn)).connect(signerArray[0])
+
+        await expect(() => gov.unlock(k1)).to.changeTokenBalance(await getToken(torn), signerArray[0], k1)
+
+        const registry = await RelayerRegistry.connect(signerArray[0])
+
+        await Torn.approve(RelayerRegistry.address, k1)
+
+        await registry.stakeToRelayer(relayers[0].address, k1)
+
+        expect(await registry.getRelayerBalance(relayers[0].address)).to.be.gt(k1)
       })
     })
   })

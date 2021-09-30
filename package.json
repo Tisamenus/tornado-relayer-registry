@@ -29,7 +29,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.6",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/0.6.x": "npm:@openzeppelin/contracts@3.2.0",
+    "@openzeppelin/0.6": "npm:@openzeppelin/contracts@3.2.0",
     "@openzeppelin/hardhat-upgrades": "^1.10.0",
     "@uniswap/v3-core": "https://github.com/h-ivor/uniswap-v3-core",
     "@uniswap/v3-periphery": "https://github.com/h-ivor/uniswap-v3-periphery",
@@ -40,6 +40,7 @@
     "tornado-anonymity-mining": "^2.1.5",
     "tornado-cli": "^0.0.1",
     "tornado-governance": "^1.0.1",
+    "tornado-lottery-period": "https://github.com/h-ivor/tornado-lottery-period.git",
     "tornado-trees": "^0.0.11"
   },
   "devDependencies": {
