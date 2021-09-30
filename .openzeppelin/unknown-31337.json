@@ -7,8 +7,8 @@
       "hash": "0x0798408660f840ee3d6b39ec0f1e2ed9abb91cbf578a7fbaa9dba8c5b99f51b2",
       "type": 2,
       "accessList": [],
-      "blockHash": "0x25b893846ffa5fb8b438370ebd0daadd6397da603fd4b8859c4c029d272c858a",
-      "blockNumber": 13321058,
+      "blockHash": "0xefab9eab2b247855ff53dd1ee803e3bb31bbbf80cdb7391efe1026e44536ecf2",
+      "blockNumber": 13327016,
       "transactionIndex": 0,
       "confirmations": 1,
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -44,30 +44,27 @@
   },
   "proxies": [
     {
-      "address": "0x51A1ceB83B83F1985a81C295d1fF28Afef186E02",
-      "txHash": "0x2d4bc3bd2c4470feb9e12bfe6ade549666285f8867597ae0e23761e081204f82",
+      "address": "0xcbEAF3BDe82155F56486Fb5a1072cb8baAf547cc",
+      "txHash": "0x27d19f6e60889af19f79a772e22e6a97eb9fc472d63ff80ae634ab0605b5d0cb",
       "kind": "transparent"
     },
     {
-      "address": "0xcbEAF3BDe82155F56486Fb5a1072cb8baAf547cc",
-      "txHash": "0x27d19f6e60889af19f79a772e22e6a97eb9fc472d63ff80ae634ab0605b5d0cb",
+      "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
+      "txHash": "0xb6af7b61af5bb19816fbce82c197d267794f54410c26f0fb19f8b445b851a28c",
       "kind": "transparent"
     },
     {
       "address": "0x04C89607413713Ec9775E14b954286519d836FEf",
       "txHash": "0xaa180403da690ac1712ffef0b4eaaaef7960a7a5bf4b27a94052dc242d5dbb31",
       "kind": "transparent"
+    },
+    {
+      "address": "0x51A1ceB83B83F1985a81C295d1fF28Afef186E02",
+      "txHash": "0x886ef7242074d6851c0eb86ffa62359bf1f6443c5253617748eda1e20693b877",
+      "kind": "transparent"
     }
   ],
   "impls": {
-    "8c9e4b8aabd79c5e5de513964f21c353a610556585606e937d9b9011a864e744": {
-      "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-      "txHash": "0xe3dca78fdb7a14cdaec1e77d5e9ce407783faa805ad76571ce5467ba036fd1b2",
-      "layout": {
-        "storage": [],
-        "types": {}
-      }
-    },
     "34c79df2379bf757cbabfbf9b1fa56caa67a5d44ad4d7a36ddc128276feeaa35": {
       "address": "0xc351628EB244ec633d5f21fBD6621e1a683B1181",
       "txHash": "0xfffd1b9ecef31e7232716ff94f04eb1fc8d6fd47f352b193bbb5bdb734f545b0",
@@ -76,12 +73,233 @@
         "types": {}
       }
     },
+    "f069c39516094103ee9ac860c10d67e730a2920163b85099199c2dd8baf0e4a0": {
+      "address": "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43",
+      "txHash": "0x5a455aeef1308ed6509d833c0d7888f579257ecb097bffd00d527c4f1919c136",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:23"
+          },
+          {
+            "contract": "Initializable",
+            "label": "initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:28"
+          },
+          {
+            "contract": "Initializable",
+            "label": "______gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:63"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "torn",
+            "type": "t_contract(IERC20)344",
+            "src": "contracts/staking/TornadoStakingRewards.sol:13"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "governance",
+            "type": "t_address",
+            "src": "contracts/staking/TornadoStakingRewards.sol:14"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "ratioConstant",
+            "type": "t_uint256",
+            "src": "contracts/staking/TornadoStakingRewards.sol:15"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "relayerRegistry",
+            "type": "t_address",
+            "src": "contracts/staking/TornadoStakingRewards.sol:17"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "totalCollectedShareValue",
+            "type": "t_uint256",
+            "src": "contracts/staking/TornadoStakingRewards.sol:18"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "lockedAmount",
+            "type": "t_uint256",
+            "src": "contracts/staking/TornadoStakingRewards.sol:19"
+          },
+          {
+            "contract": "TornadoStakingRewards",
+            "label": "collectedAfterAccountInteraction",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/staking/TornadoStakingRewards.sol:21"
+          }
+        ],
+        "types": {
+          "t_contract(IERC20)344": {
+            "label": "contract IERC20"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          }
+        }
+      }
+    },
     "4915c2f65d57b5079b461b10bc369559f177a1f64386236a005f133541559499": {
       "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
       "txHash": "0xfb0e3db1ded0c287f38c5c2bec77317caf123ffa1c9daea68799487d9e4cae3e",
       "layout": {
         "storage": [],
         "types": {}
+      }
+    },
+    "169e5b64a5154415ddc0d2ab153696e4da183e6c4ca1938fca465169f97eacc8": {
+      "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
+      "txHash": "0xded0efb7c177d2744ff3b638ff9ec4e77fd355688535bdbe8f104285d2768f61",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:23"
+          },
+          {
+            "contract": "Initializable",
+            "label": "initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:28"
+          },
+          {
+            "contract": "Initializable",
+            "label": "______gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/upgrades-core/contracts/Initializable.sol:63"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "governanceCallForwarder",
+            "type": "t_address",
+            "src": "contracts/RelayerRegistry.sol:35"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "torn",
+            "type": "t_contract(IERC20)344",
+            "src": "contracts/RelayerRegistry.sol:37"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "Staking",
+            "type": "t_contract(ITornadoStakingRewards)4276",
+            "src": "contracts/RelayerRegistry.sol:38"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "RegistryData",
+            "type": "t_contract(RelayerRegistryData)6034",
+            "src": "contracts/RelayerRegistry.sol:39"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "minStakeAmount",
+            "type": "t_uint256",
+            "src": "contracts/RelayerRegistry.sol:41"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "tornadoProxy",
+            "type": "t_address",
+            "src": "contracts/RelayerRegistry.sol:42"
+          },
+          {
+            "contract": "RelayerRegistry",
+            "label": "getMetadataForRelayer",
+            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4298_storage)",
+            "src": "contracts/RelayerRegistry.sol:44"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address"
+          },
+          "t_contract(IERC20)344": {
+            "label": "contract IERC20"
+          },
+          "t_contract(ITornadoStakingRewards)4276": {
+            "label": "contract ITornadoStakingRewards"
+          },
+          "t_contract(RelayerRegistryData)6034": {
+            "label": "contract RelayerRegistryData"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_address,t_struct(RelayerMetadata)4298_storage)": {
+            "label": "mapping(address => struct RelayerMetadata)"
+          },
+          "t_struct(RelayerMetadata)4298_storage": {
+            "label": "struct RelayerMetadata",
+            "members": [
+              {
+                "label": "intData",
+                "type": "t_struct(RelayerIntegerMetadata)4289_storage"
+              },
+              {
+                "label": "ensHash",
+                "type": "t_bytes32"
+              },
+              {
+                "label": "addresses",
+                "type": "t_mapping(t_address,t_bool)"
+              }
+            ]
+          },
+          "t_struct(RelayerIntegerMetadata)4289_storage": {
+            "label": "struct RelayerIntegerMetadata",
+            "members": [
+              {
+                "label": "balance",
+                "type": "t_uint128"
+              },
+              {
+                "label": "fee",
+                "type": "t_uint128"
+              }
+            ]
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_uint128": {
+            "label": "uint128"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          }
+        }
       }
     }
   }

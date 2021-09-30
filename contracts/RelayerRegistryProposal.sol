@@ -11,9 +11,9 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
-import { RelayerRegistry } from "./RelayerRegistry.sol";
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
+import { RegistryCallForwarder } from "./governance-upgrade/RegistryCallForwarder.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
@@ -25,7 +25,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant TornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
-  RelayerRegistry public immutable Registry;
+  RegistryCallForwarder public immutable Forwarder;
   TornadoStakingRewards public immutable Staking;
   TornadoInstancesData public immutable InstancesData;
 
@@ -35,7 +35,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public immutable tornadoVault;
 
   constructor(
-    address relayerRegistryAddress,
+    address callForwarderAddress,
     address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
     address stakingAddress,
@@ -43,7 +43,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     address gasCompLogicAddress,
     address vaultAddress
   ) public {
-    Registry = RelayerRegistry(relayerRegistryAddress);
+    Forwarder = RegistryCallForwarder(callForwarderAddress);
     newTornadoProxy = newTornadoProxyAddress;
     oldTornadoProxy = oldTornadoProxyAddress;
     Staking = TornadoStakingRewards(stakingAddress);
@@ -57,18 +57,18 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
     );
 
-    Registry.registerProxy(newTornadoProxy);
-
     TornadoTrees(TornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
-    RelayerRegistryData RegistryData = Registry.RegistryData();
+    Forwarder.forwardRegisterProxy(newTornadoProxy);
+
+    RelayerRegistryData RegistryData = Forwarder.getRegistryData();
 
     RegistryData.setProtocolFee(1e15);
     RegistryData.setPeriodForTWAPOracle(5400);
 
-    Staking.registerRelayerRegistry(address(Registry));
+    Staking.registerRelayerRegistry(address(Forwarder.Registry()));
 
-    Registry.setMinStakeAmount(100 ether);
+    Forwarder.forwardSetMinStakeAmount(100 ether);
 
     disableOldProxy();
   }

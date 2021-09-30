@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/0.6.x/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/0.6.x/proxy/Initializable.sol";
 
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;
@@ -26,17 +27,16 @@ struct RelayerMetadata {
   mapping(address => bool) addresses;
 }
 
-contract RelayerRegistry {
+contract RelayerRegistry is Initializable {
   using SafeMath for uint256;
   using SafeMath for uint128;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
-  address public immutable governance;
+  address public governanceCallForwarder;
 
-  IERC20 public immutable torn;
-
-  ITornadoStakingRewards public immutable Staking;
-  RelayerRegistryData public immutable RegistryData;
+  IERC20 public torn;
+  ITornadoStakingRewards public Staking;
+  RelayerRegistryData public RegistryData;
 
   uint256 public minStakeAmount;
   address public tornadoProxy;
@@ -48,20 +48,8 @@ contract RelayerRegistry {
   event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
   event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint248 indexed fee, uint256 indexed stakedAmount);
 
-  constructor(
-    address registryDataAddress,
-    address tornadoGovernance,
-    address stakingAddress,
-    address tornTokenAddress
-  ) public {
-    RegistryData = RelayerRegistryData(registryDataAddress);
-    governance = tornadoGovernance;
-    Staking = ITornadoStakingRewards(stakingAddress);
-    torn = IERC20(tornTokenAddress);
-  }
-
-  modifier onlyGovernance() {
-    require(msg.sender == governance, "only governance");
+  modifier onlyGovernanceCallForwarder() {
+    require(msg.sender == governanceCallForwarder, "only governance");
     _;
   }
 
@@ -78,6 +66,18 @@ contract RelayerRegistry {
   modifier onlyRelayer(address sender, address relayer) {
     require(getMetadataForRelayer[relayer].addresses[sender], "only relayer");
     _;
+  }
+
+  function initialize(
+    address registryDataAddress,
+    address tornadoGovernance,
+    address stakingAddress,
+    address tornTokenAddress
+  ) external initializer {
+    RegistryData = RelayerRegistryData(registryDataAddress);
+    governanceCallForwarder = tornadoGovernance;
+    Staking = ITornadoStakingRewards(stakingAddress);
+    torn = IERC20(tornTokenAddress);
   }
 
   function stakeToRelayer(address relayer, uint128 stake) external {
@@ -125,15 +125,15 @@ contract RelayerRegistry {
     Staking.addBurnRewards(toBurn);
   }
 
-  function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
+  function setMinStakeAmount(uint256 minAmount) external onlyGovernanceCallForwarder {
     minStakeAmount = minAmount;
   }
 
-  function registerProxy(address tornadoProxyAddress) external onlyGovernance {
+  function registerProxy(address tornadoProxyAddress) external onlyGovernanceCallForwarder {
     tornadoProxy = tornadoProxyAddress;
   }
 
-  function nullifyBalance(address relayer) external onlyGovernance {
+  function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
     getMetadataForRelayer[relayer].intData.balance = 0;
     emit RelayerBalanceNullified(relayer);
   }

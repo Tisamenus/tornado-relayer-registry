@@ -9,16 +9,13 @@ import { SafeMath } from "@openzeppelin/0.6.x/math/SafeMath.sol";
 contract TornadoStakingRewards {
   using SafeMath for uint256;
 
-  address public immutable governance;
-
   IERC20 public immutable torn;
+  address public immutable governance;
   uint256 public immutable ratioConstant;
 
   address public relayerRegistry;
   uint256 public totalCollectedShareValue;
   uint256 public lockedAmount;
-
-  mapping(address => uint256) public collectedAfterAccountInteraction;
 
   constructor(
     address governanceAddress,
@@ -27,9 +24,11 @@ contract TornadoStakingRewards {
   ) public {
     governance = governanceAddress;
     torn = IERC20(tornAddress);
-    ratioConstant = IERC20(tornAddress).totalSupply();
     lockedAmount = initialLockedAmount;
+    ratioConstant = IERC20(tornAddress).totalSupply();
   }
+
+  mapping(address => uint256) public collectedAfterAccountInteraction;
 
   modifier onlyGovernance() {
     require(msg.sender == address(governance), "only governance");
@@ -41,12 +40,12 @@ contract TornadoStakingRewards {
     _;
   }
 
-  function addBurnRewards(uint256 amount) external onlyRelayerRegistry {
-    totalCollectedShareValue = totalCollectedShareValue.add(amount.mul(ratioConstant).div(lockedAmount));
+  function registerRelayerRegistry(address relayerRegistryAddress) external onlyGovernance {
+    relayerRegistry = relayerRegistryAddress;
   }
 
-  function registerRelayerRegistry(address registryAddress) external onlyGovernance {
-    relayerRegistry = registryAddress;
+  function addBurnRewards(uint256 amount) external onlyRelayerRegistry {
+    totalCollectedShareValue = totalCollectedShareValue.add(amount.mul(ratioConstant).div(lockedAmount));
   }
 
   function updateLockedAmountOnLock(uint256 amount) external onlyGovernance {
@@ -57,7 +56,7 @@ contract TornadoStakingRewards {
     lockedAmount = lockedAmount.sub(amount);
   }
 
-  function governanceClaimFor(
+  function claimFor(
     address account,
     address recipient,
     uint256 amountLockedBeforehand

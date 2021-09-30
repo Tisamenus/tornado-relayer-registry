@@ -33,6 +33,9 @@ describe('Data and Manager tests', () => {
   let RelayerRegistry
   let RegistryFactory
 
+  let ForwarderFactory
+  let ForwarderContract
+
   let StakingFactory
   let StakingContract
 
@@ -121,12 +124,21 @@ describe('Data and Manager tests', () => {
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
 
-    RelayerRegistry = await RegistryFactory.deploy(
+    RelayerRegistry = await upgrades.deployProxy(RegistryFactory, {
+      initializer: false,
+    })
+
+    ForwarderFactory = await ethers.getContractFactory('RegistryCallForwarder')
+    ForwarderContract = await ForwarderFactory.deploy(governance, RelayerRegistry.address)
+
+    await RelayerRegistry.initialize(
       RegistryData.address,
-      governance,
+      ForwarderContract.address,
       StakingContract.address,
       torn,
     )
+
+    await upgrades.admin.changeProxyAdmin(RelayerRegistry.address, governance)
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
@@ -162,7 +174,7 @@ describe('Data and Manager tests', () => {
     ////////////// PROPOSAL OPTION 1
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
-      RelayerRegistry.address,
+      ForwarderContract.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,

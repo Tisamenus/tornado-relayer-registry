@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import { GovernanceGasUpgrade } from "../../submodules/tornado-lottery-period/contracts/gas/GovernanceGasUpgrade.sol";
 
 interface ITornadoStakingRewards {
-  function governanceClaimFor(
+  function claimFor(
     address staker,
     address recipient,
     uint256 amountLockedBeforehand
@@ -36,7 +36,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     bytes32 r,
     bytes32 s
   ) external virtual override {
-    (uint256 claimed, bool success) = Staking.governanceClaimFor(owner, address(userVault), lockedBalance[owner]);
+    (uint256 claimed, bool success) = Staking.claimFor(owner, address(userVault), lockedBalance[owner]);
     if (!success) claimed = 0;
 
     torn.permit(owner, address(this), amount, deadline, v, r, s);
@@ -47,7 +47,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   }
 
   function lockWithApproval(uint256 amount) external virtual override {
-    (uint256 claimed, bool success) = Staking.governanceClaimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
+    (uint256 claimed, bool success) = Staking.claimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
     if (!success) claimed = 0;
 
     _transferTokens(msg.sender, amount);
@@ -57,7 +57,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   }
 
   function unlock(uint256 amount) external virtual override {
-    Staking.governanceClaimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
+    Staking.claimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
