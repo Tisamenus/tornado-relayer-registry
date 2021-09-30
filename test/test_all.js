@@ -326,6 +326,15 @@ describe('Data and Manager tests', () => {
           )
         }
       })
+
+      it('Should repeatedly update fees and assure none return 0', async () => {
+        for (let i = 0; i < tornadoPools.length; i++) {
+          await RegistryData.updateAllFees()
+          for (let j = 0; j < tornadoPools.length; j++) {
+            expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+          }
+        }
+      })
     })
 
     describe('Test registry registration', () => {
@@ -368,8 +377,6 @@ describe('Data and Manager tests', () => {
             .approve(RelayerRegistry.address, ethers.utils.parseEther('300'))
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
-
-          await minewait(86400 * 10) // delay so we can test further below
 
           await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [
             `${relayers[i].address}`,
