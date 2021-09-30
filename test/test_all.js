@@ -184,6 +184,19 @@ describe('Data and Manager tests', () => {
   })
 
   describe('Start of tests', () => {
+    describe('Initialization related', () => {
+      it('It should NOT be possible to call initialize again', async () => {
+        await expect(
+          RelayerRegistry.initialize(
+            RegistryData.address,
+            ForwarderContract.address,
+            StakingContract.address,
+            torn,
+          ),
+        ).to.be.reverted
+      })
+    })
+
     describe('Account setup procedure', () => {
       it('Should successfully imitate a torn whale', async function () {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
@@ -475,6 +488,26 @@ describe('Data and Manager tests', () => {
     })
 
     describe('Test registry staking', () => {
+      it('Should NOT reward with you if you lock, then try to harvest', async () => {
+        const k5 = ethers.utils.parseEther('5000')
+
+        await expect(() => erc20Transfer(torn, tornWhale, signerArray[3].address, k5)).to.changeTokenBalance(
+          await getToken(torn),
+          signerArray[3],
+          k5,
+        )
+
+        const gov = await Governance.connect(signerArray[3])
+        const Torn = (await getToken(torn)).connect(signerArray[3])
+
+        await Torn.approve(gov.address, k5)
+        await gov.lockWithApproval(k5)
+
+        const balance = await gov.lockedBalance(signerArray[3].address)
+
+        expect(balance).to.equal(k5)
+      })
+
       it('Should properly harvest rewards if someone calls lockWithApproval(0)', async function () {
         const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString()
 
@@ -528,6 +561,87 @@ describe('Data and Manager tests', () => {
         await registry.stakeToRelayer(relayers[0].address, k1)
 
         expect(await registry.getRelayerBalance(relayers[0].address)).to.be.gt(k1)
+      })
+
+      it('Third harvest shouldnt work if no withdraw was made', async () => {
+        const Torn = await getToken(torn)
+
+        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
+
+        let gov = await Governance.connect(signerArray[0])
+        await gov.unlock(0)
+        gov = await Governance.connect(signerArray[1])
+        await gov.unlock(0)
+
+        expect(await Torn.balanceOf(signerArray[0].address)).to.be.equal(initialBalance0)
+        expect(await Torn.balanceOf(signerArray[2].address)).to.be.equal(initialBalance1)
+      })
+
+      it('It should NOT be possible to withdraw more than you have', async () => {
+        let gov = await Governance.connect(signerArray[0])
+        await expect(gov.unlock(ethers.utils.parseEther('5000000'))).to.be.reverted
+      })
+
+      it('Should succesfully deposit and withdraw from / into the instance we staked to', async function () {
+        const daiToken = await (await getToken(dai)).connect(daiWhale)
+        const instanceAddress = tornadoPools[6]
+
+        const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
+        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
+
+        const instance = await ethers.getContractAt(
+          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
+          instanceAddress,
+        )
+        const proxy = await TornadoProxy.connect(daiWhale)
+        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+
+        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
+
+        const depo = createDeposit({
+          nullifier: rbigint(31),
+          secret: rbigint(31),
+        })
+
+        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          BigNumber.from(0).sub(await instance.denomination()),
+        )
+
+        let pevents = await mixer.queryFilter('Deposit')
+        await initialize({ merkleTreeHeight: 20 })
+
+        const { proof, args } = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+          relayerAddress: relayers[0].address,
+          events: pevents,
+        })
+
+        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+
+        await expect(() => proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          await instance.denomination(),
+        )
+
+        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
+      })
+
+      it('Should properly harvest all three rewards with lockWithApproval(0)', async function () {
+        for (let i = 0; i < 3; i++) {
+          const initialBalance = (await Governance.lockedBalance(signerArray[i].address)).toString()
+
+          const gov = await Governance.connect(signerArray[i])
+
+          await gov.lockWithApproval(0)
+
+          expect(await Governance.lockedBalance(signerArray[i].address)).to.be.gt(initialBalance)
+        }
       })
     })
   })
