@@ -24,7 +24,6 @@ struct RelayerIntegerMetadata {
 struct RelayerMetadata {
   RelayerIntegerMetadata intData;
   bytes32 ensHash;
-  mapping(address => bool) addresses;
 }
 
 contract RelayerRegistry is Initializable {
@@ -42,6 +41,7 @@ contract RelayerRegistry is Initializable {
   address public tornadoProxy;
 
   mapping(address => RelayerMetadata) public getMetadataForRelayer;
+  mapping(address => address) public getMasterForSubaddress;
 
   event RelayerBalanceNullified(address indexed relayer);
   event RelayerChangedFee(address indexed relayer, uint248 indexed newFee);
@@ -64,7 +64,7 @@ contract RelayerRegistry is Initializable {
   }
 
   modifier onlyRelayer(address sender, address relayer) {
-    require(getMetadataForRelayer[relayer].addresses[sender], "only relayer");
+    require(getMasterForSubaddress[sender] == relayer, "only relayer");
     _;
   }
 
@@ -78,13 +78,6 @@ contract RelayerRegistry is Initializable {
     governanceCallForwarder = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
     torn = IERC20(tornTokenAddress);
-  }
-
-  function stakeToRelayer(address relayer, uint128 stake) external {
-    require(getMetadataForRelayer[relayer].addresses[relayer], "!registered");
-    _sendStakeToStaking(msg.sender, stake);
-    emit StakeAddedToRelayer(relayer, stake);
-    getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
   }
 
   function register(
@@ -102,19 +95,33 @@ contract RelayerRegistry is Initializable {
     emit StakeAddedToRelayer(msg.sender, stake);
 
     metadata.intData = RelayerIntegerMetadata(stake, fee);
-    metadata.addresses[msg.sender] = true;
     metadata.ensHash = ensHash;
+    getMasterForSubaddress[msg.sender] = msg.sender;
 
     for (uint256 i = 0; i < toRegister.length; i++) {
-      metadata.addresses[toRegister[i]] = true;
+      require(getMasterForSubaddress[toRegister[i]] == address(0), "can't steal an address");
+      getMasterForSubaddress[toRegister[i]] = msg.sender;
     }
 
     emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
   }
 
-  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
-    getMetadataForRelayer[relayer].intData.fee = newFee;
-    emit RelayerChangedFee(relayer, uint128(newFee));
+  function registerSubaddress(address relayer, address subaddress) external {
+    require(getMasterForSubaddress[msg.sender] == relayer, "only relayer");
+    getMasterForSubaddress[subaddress] = relayer;
+  }
+
+  function unregisterSubaddress(address account, bool burn) external {
+    require(msg.sender == account, "can only unregister self");
+    if (burn) _nullifyBalance(getMasterForSubaddress[account]);
+    getMasterForSubaddress[account] = address(0);
+  }
+
+  function stakeToRelayer(address relayer, uint128 stake) external {
+    require(getMasterForSubaddress[relayer] == relayer, "!registered");
+    _sendStakeToStaking(msg.sender, stake);
+    emit StakeAddedToRelayer(relayer, stake);
+    getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
   }
 
   function burn(
@@ -127,6 +134,11 @@ contract RelayerRegistry is Initializable {
     Staking.addBurnRewards(toBurn);
   }
 
+  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
+    getMetadataForRelayer[relayer].intData.fee = newFee;
+    emit RelayerChangedFee(relayer, uint128(newFee));
+  }
+
   function setMinStakeAmount(uint256 minAmount) external onlyGovernanceCallForwarder {
     minStakeAmount = minAmount;
   }
@@ -136,16 +148,19 @@ contract RelayerRegistry is Initializable {
   }
 
   function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
-    getMetadataForRelayer[relayer].intData.balance = 0;
-    emit RelayerBalanceNullified(relayer);
+    _nullifyBalance(relayer);
   }
 
   function getRelayerFee(address relayer) external view returns (uint128) {
     return getMetadataForRelayer[relayer].intData.fee;
   }
 
+  function isRelayer(address toResolve) external view returns (bool) {
+    return getMasterForSubaddress[toResolve] != address(0);
+  }
+
   function isRelayerRegistered(address relayer, address toResolve) external view returns (bool) {
-    return getMetadataForRelayer[relayer].addresses[toResolve];
+    return getMasterForSubaddress[toResolve] == relayer;
   }
 
   function getRelayerEnsHash(address relayer) external view returns (bytes32) {
@@ -154,6 +169,12 @@ contract RelayerRegistry is Initializable {
 
   function getRelayerBalance(address relayer) external view returns (uint128) {
     return getMetadataForRelayer[relayer].intData.balance;
+  }
+
+  function _nullifyBalance(address relayer) private {
+    Staking.addBurnRewards(getMetadataForRelayer[relayer].intData.balance);
+    getMetadataForRelayer[relayer].intData.balance = 0;
+    emit RelayerBalanceNullified(relayer);
   }
 
   function _sendStakeToStaking(address sender, uint256 stake) private {

@@ -31,6 +31,10 @@ contract RegistryCallForwarder {
     Registry.nullifyBalance(relayer);
   }
 
+  function forwardIsRelayer(address account) external view onlyGovernance returns (bool) {
+    Registry.isRelayer(account);
+  }
+
   function getRegistryData() external returns (RelayerRegistryData) {
     return Registry.RegistryData();
   }

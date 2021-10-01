@@ -378,9 +378,7 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-          await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [
-            `${relayers[i].address}`,
-          ])
+          await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [])
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true

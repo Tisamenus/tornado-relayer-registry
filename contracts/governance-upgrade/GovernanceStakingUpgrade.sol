@@ -13,15 +13,27 @@ interface ITornadoStakingRewards {
   ) external returns (uint256, bool);
 }
 
+interface IRegistryCallForwarder {
+  function forwardIsRelayer(address toResolve) external view returns (bool);
+}
+
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
+  IRegistryCallForwarder public immutable RegistryCallForwarder;
 
   constructor(
     address stakingRewardsAddress,
+    address registryCallForwarderAddress,
     address gasCompLogic,
     address userVaultAddress
   ) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
+    RegistryCallForwarder = IRegistryCallForwarder(registryCallForwarderAddress);
+  }
+
+  modifier onlyNonRelayer(address account) {
+    require(!RegistryCallForwarder.forwardIsRelayer(account), "only non relayer");
+    _;
   }
 
   function lock(
@@ -31,7 +43,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external virtual override {
+  ) external virtual override onlyNonRelayer(owner) {
     (uint256 claimed, bool success) = Staking.claimFor(owner, address(userVault), lockedBalance[owner]);
     if (!success) claimed = 0;
 
@@ -41,7 +53,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     if (success) lockedBalance[owner] = lockedBalance[owner].add(claimed);
   }
 
-  function lockWithApproval(uint256 amount) external virtual override {
+  function lockWithApproval(uint256 amount) external virtual override onlyNonRelayer(msg.sender) {
     (uint256 claimed, bool success) = Staking.claimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
     if (!success) claimed = 0;
 
@@ -50,7 +62,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     if (success) lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
   }
 
-  function unlock(uint256 amount) external virtual override {
+  function unlock(uint256 amount) external virtual override onlyNonRelayer(msg.sender) {
     Staking.claimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
 
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
