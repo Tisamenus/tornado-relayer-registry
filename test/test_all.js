@@ -74,7 +74,7 @@ describe('Data and Manager tests', () => {
   }
 
   let getToken = async (tokenAddress) => {
-    return await ethers.getContractAt('@openzeppelin/0.6/token/ERC20/IERC20.sol:IERC20', tokenAddress)
+    return await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20', tokenAddress)
   }
 
   let erc20Transfer = async (tokenAddress, senderWallet, recipientAddress, amount) => {
