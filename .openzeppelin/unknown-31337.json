@@ -7,8 +7,8 @@
       "hash": "0x0798408660f840ee3d6b39ec0f1e2ed9abb91cbf578a7fbaa9dba8c5b99f51b2",
       "type": 2,
       "accessList": [],
-      "blockHash": "0x0d297eb8d24dd6015f5d03e63c5c66a7d9eae11ffd1484f9c014ad7cc61757bb",
-      "blockNumber": 13333900,
+      "blockHash": "0x56a2bd02a5248f9ce98c2098e50717aafa8a53fefe64a583fad1eb6bc57950ff",
+      "blockNumber": 13327016,
       "transactionIndex": 0,
       "confirmations": 1,
       "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -161,17 +161,17 @@
         }
       }
     },
-    "4915c2f65d57b5079b461b10bc369559f177a1f64386236a005f133541559499": {
+    "4606c77f0469d48a2fa7922ae9c22c4a855f4497028345c09ddf60ad91054a17": {
       "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-      "txHash": "0x2cbafaabc4e70e9a35f071152c36801532c2af4e9fa90367e2774d3721287ed8",
+      "txHash": "0x23d73cc0b26282a10bc4ef99902671d8289f742fc09aaac619c0f302e9d46d63",
       "layout": {
         "storage": [],
         "types": {}
       }
     },
-    "b7b47ecdcfbc09b82e42828d11acdc5f368b181561f247176b4d13f000f6ff15": {
+    "a7eedfe105420aa77aabdad3380cd0ca4cfd94bfb4c6694f8660e5ae118a3227": {
       "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-      "txHash": "0x35a6b51880b4f79f0ea5d342e1502b3360ba689fe2ca1467aeded4ea839ee25b",
+      "txHash": "0xbe8a1a00122a5d0ea749c5dc6522350f0a7464208b16f2f2b2f0b8e34dc701f5",
       "layout": {
         "storage": [
           {
@@ -201,19 +201,19 @@
           {
             "contract": "RelayerRegistry",
             "label": "torn",
-            "type": "t_contract(IERC20)344",
+            "type": "t_contract(IERC20)1607",
             "src": "contracts/RelayerRegistry.sol:36"
           },
           {
             "contract": "RelayerRegistry",
             "label": "Staking",
-            "type": "t_contract(ITornadoStakingRewards)4276",
+            "type": "t_contract(ITornadoStakingRewards)3997",
             "src": "contracts/RelayerRegistry.sol:37"
           },
           {
             "contract": "RelayerRegistry",
             "label": "RegistryData",
-            "type": "t_contract(RelayerRegistryData)6174",
+            "type": "t_contract(RelayerRegistryData)5895",
             "src": "contracts/RelayerRegistry.sol:38"
           },
           {
@@ -231,7 +231,7 @@
           {
             "contract": "RelayerRegistry",
             "label": "getMetadataForRelayer",
-            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4294_storage)",
+            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4015_storage)",
             "src": "contracts/RelayerRegistry.sol:43"
           },
           {
@@ -245,27 +245,27 @@
           "t_address": {
             "label": "address"
           },
-          "t_contract(IERC20)344": {
+          "t_contract(IERC20)1607": {
             "label": "contract IERC20"
           },
-          "t_contract(ITornadoStakingRewards)4276": {
+          "t_contract(ITornadoStakingRewards)3997": {
             "label": "contract ITornadoStakingRewards"
           },
-          "t_contract(RelayerRegistryData)6174": {
+          "t_contract(RelayerRegistryData)5895": {
             "label": "contract RelayerRegistryData"
           },
           "t_uint256": {
             "label": "uint256"
           },
-          "t_mapping(t_address,t_struct(RelayerMetadata)4294_storage)": {
+          "t_mapping(t_address,t_struct(RelayerMetadata)4015_storage)": {
             "label": "mapping(address => struct RelayerMetadata)"
           },
-          "t_struct(RelayerMetadata)4294_storage": {
+          "t_struct(RelayerMetadata)4015_storage": {
             "label": "struct RelayerMetadata",
             "members": [
               {
                 "label": "intData",
-                "type": "t_struct(RelayerIntegerMetadata)4289_storage"
+                "type": "t_struct(RelayerIntegerMetadata)4010_storage"
               },
               {
                 "label": "ensHash",
@@ -273,7 +273,7 @@
               }
             ]
           },
-          "t_struct(RelayerIntegerMetadata)4289_storage": {
+          "t_struct(RelayerIntegerMetadata)4010_storage": {
             "label": "struct RelayerIntegerMetadata",
             "members": [
               {

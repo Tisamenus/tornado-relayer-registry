@@ -4,9 +4,9 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
-import { SafeMath } from "@openzeppelin/0.6/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/0.6/token/ERC20/IERC20.sol";
-import { Initializable } from "@openzeppelin/0.6/proxy/Initializable.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;

@@ -3,8 +3,8 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { IERC20 } from "@openzeppelin/0.6/token/ERC20/IERC20.sol";
-import { SafeMath } from "@openzeppelin/0.6/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "tornado-lottery-period/contracts/interfaces/ITornadoVault.sol";
 

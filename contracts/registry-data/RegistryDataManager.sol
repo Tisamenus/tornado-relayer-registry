@@ -5,8 +5,8 @@ pragma experimental ABIEncoderV2;
 
 import { UniswapV3OracleHelper } from "../libraries/UniswapV3OracleHelper.sol";
 import { RelayerRegistryData } from "./RelayerRegistryData.sol";
-import { SafeMath } from "@openzeppelin/0.6/math/SafeMath.sol";
-import { IERC20 } from "@openzeppelin/0.6/token/ERC20/IERC20.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface ERC20Tornado {
   function token() external view returns (address);

@@ -47,7 +47,7 @@ module.exports = {
     hardhat: {
       forking: {
         url: `https://mainnet.infura.io/v3/${process.env.mainnet_rpc_key}`,
-        //        blockNumber: 13327013,
+        blockNumber: 13327013,
       },
       initialBaseFeePerGas: 5,
       loggingEnabled: false,
