@@ -58,16 +58,19 @@ contract TornadoStakingRewards {
     return _calculateAndPayReward(account, recipient, amountLockedBeforehand);
   }
 
+  /**
+   * @dev ok i went back on it and checked it out again, the logic didn't need a check anyways because it works, explanation:
+   * the amount checked is always the amount which is locked beforehand in governance, which means, once rewards start and say we are
+   * 3 months into rewards, someone completely new can come in and lock, and if they do this, they will not be accredited for it because
+   * it will multiply the bottom number with 0 (.mul(amountLockedBeforehand)) and the whole thing will go to 0
+   * you can't unlock, or lock any way, without triggering this, so there is no way of actually getting a reward
+   * unless you had locked TORN in governance beforehand, in which case that much will be accredited to you
+   * */
   function _calculateAndPayReward(
     address account,
     address recipient,
     uint256 amountLockedBeforehand
   ) private returns (uint256 claimed, bool transferSuccess) {
-    if (amountLockedBeforehand == 0) {
-      accumulatedOnLastClaim[account] = accumulatedRewardPerTorn;
-      return (0, false);
-    }
-
     claimed = (accumulatedRewardPerTorn.sub(accumulatedOnLastClaim[account])).mul(amountLockedBeforehand).div(ratioConstant);
 
     accumulatedOnLastClaim[account] = accumulatedRewardPerTorn;
