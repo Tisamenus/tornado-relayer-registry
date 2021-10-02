@@ -54,7 +54,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
   function executeProposal() external {
     LoopbackProxy(returnPayableGovernance()).upgradeTo(
-      address(new GovernanceStakingUpgrade(address(Staking), address(Forwarder), gasCompLogic, tornadoVault))
+      address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
     );
 
     TornadoTrees(TornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);

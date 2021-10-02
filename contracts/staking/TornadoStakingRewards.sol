@@ -5,24 +5,35 @@ pragma experimental ABIEncoderV2;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "tornado-lottery-period/contracts/interfaces/ITornadoVault.sol";
 
 interface ITornadoGovernance {
+  function lockedBalance(address account) external view returns (uint256);
+
   function userVault() external view returns (ITornadoVault);
 }
 
-contract TornadoStakingRewards {
+contract TornadoStakingRewards is ReentrancyGuard {
   using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
-  IERC20 public immutable torn;
   ITornadoGovernance public immutable Governance;
+  IERC20 public immutable torn;
+
   uint256 public immutable ratioConstant;
 
   address public relayerRegistry;
   uint256 public accumulatedRewardPerTorn;
 
-  mapping(address => uint256) public accumulatedOnLastClaim;
+  mapping(address => uint256) public accumulatedRewardRateOnLastUpdate;
+  mapping(address => uint256) public accumulatedRewards;
+
+  event RewardsUpdated(address indexed account, uint256 indexed rewards);
+  event RewardsClaimed(address indexed account, uint256 indexed rewardsClaimed);
+  event AccumulatedRewardPerTornUpdated(uint256 indexed newRewardPerTorn);
 
   constructor(address governanceAddress, address tornAddress) public {
     Governance = ITornadoGovernance(governanceAddress);
@@ -40,6 +51,19 @@ contract TornadoStakingRewards {
     _;
   }
 
+  /**
+   * @dev We know that rewards are going to be updated every time someone locks or unlocks
+   * so we know that this function can't be used to falsely increase the amount of lockedTorn by locking in governance
+   * and subsequently calling it.
+   */
+  function getReward() external nonReentrant {
+    uint256 rewards = _updateReward(msg.sender, Governance.lockedBalance(msg.sender));
+    rewards = rewards.add(accumulatedRewards[msg.sender]);
+    accumulatedRewards[msg.sender] = 0;
+    torn.safeTransfer(msg.sender, rewards);
+    emit RewardsClaimed(msg.sender, rewards);
+  }
+
   function registerRelayerRegistry(address relayerRegistryAddress) external onlyGovernance {
     relayerRegistry = relayerRegistryAddress;
   }
@@ -48,33 +72,19 @@ contract TornadoStakingRewards {
     accumulatedRewardPerTorn = accumulatedRewardPerTorn.add(
       amount.mul(ratioConstant).div(torn.balanceOf(address(Governance.userVault())))
     );
+    emit AccumulatedRewardPerTornUpdated(accumulatedRewardPerTorn);
   }
 
-  function claimFor(
-    address account,
-    address recipient,
-    uint256 amountLockedBeforehand
-  ) external onlyGovernance returns (uint256, bool) {
-    return _calculateAndPayReward(account, recipient, amountLockedBeforehand);
+  function updateRewardsOnLockedBalanceChange(address account, uint256 amountLockedBeforehand) external onlyGovernance {
+    uint256 claimed = _updateReward(account, amountLockedBeforehand);
+    accumulatedRewards[account] = accumulatedRewards[account].add(claimed);
   }
 
-  /**
-   * @dev ok i went back on it and checked it out again, the logic didn't need a check anyways because it works, explanation:
-   * the amount checked is always the amount which is locked beforehand in governance, which means, once rewards start and say we are
-   * 3 months into rewards, someone completely new can come in and lock, and if they do this, they will not be accredited for it because
-   * it will multiply the bottom number with 0 (.mul(amountLockedBeforehand)) and the whole thing will go to 0
-   * you can't unlock, or lock any way, without triggering this, so there is no way of actually getting a reward
-   * unless you had locked TORN in governance beforehand, in which case that much will be accredited to you
-   * */
-  function _calculateAndPayReward(
-    address account,
-    address recipient,
-    uint256 amountLockedBeforehand
-  ) private returns (uint256 claimed, bool transferSuccess) {
-    claimed = (accumulatedRewardPerTorn.sub(accumulatedOnLastClaim[account])).mul(amountLockedBeforehand).div(ratioConstant);
-
-    accumulatedOnLastClaim[account] = accumulatedRewardPerTorn;
-
-    transferSuccess = torn.transfer(recipient, claimed);
+  function _updateReward(address account, uint256 amountLockedBeforehand) private returns (uint256 claimed) {
+    claimed = (accumulatedRewardPerTorn.sub(accumulatedRewardRateOnLastUpdate[account])).mul(amountLockedBeforehand).div(
+      ratioConstant
+    );
+    accumulatedRewardRateOnLastUpdate[account] = accumulatedRewardPerTorn;
+    emit RewardsUpdated(account, claimed);
   }
 }

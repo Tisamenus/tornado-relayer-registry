@@ -82,6 +82,11 @@ describe('Data and Manager tests', () => {
     return await token.transfer(recipientAddress, amount)
   }
 
+  let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
+    const token = await getToken(tokenAddress)
+    return await token.balanceOf(addressToCheck)
+  }
+
   let minewait = async (time) => {
     await ethers.provider.send('evm_increaseTime', [time])
     await ethers.provider.send('evm_mine', [])
@@ -387,7 +392,7 @@ describe('Data and Manager tests', () => {
       })
     })
 
-    describe('Test depositing and withdrawing into an instance over new proxy', () => {
+    describe('Test deposit/withdrawals and reward updating', () => {
       it('Should succesfully deposit and withdraw from / into an instance', async function () {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
@@ -435,6 +440,16 @@ describe('Data and Manager tests', () => {
 
         expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
         expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
+      })
+
+      it('Should call a lockWithApproval(0) for a signer and have incremented some of his rewards', async () => {
+        const gov = await Governance.connect(signerArray[0])
+        await expect(gov.lockWithApproval(0)).to.not.be.reverted
+
+        const balance = await StakingContract.accumulatedRewards(signerArray[0].address)
+        expect(balance).to.be.gt(0)
+
+        console.log('Signer 0 accumulatedRewards: ', balance.toString())
       })
 
       it('This time around relayer should not have enough funds for withdrawal', async function () {
@@ -492,8 +507,8 @@ describe('Data and Manager tests', () => {
       })
     })
 
-    describe('Test registry staking', () => {
-      it('Should NOT reward with you if you lock, then try to harvest', async () => {
+    describe('Test claiming rewards multiple times and withdrawing from gov', () => {
+      it('Should NOT reward you if you lock, then try to harvest', async () => {
         const k5 = ethers.utils.parseEther('5000')
 
         await expect(() => erc20Transfer(torn, tornWhale, signerArray[3].address, k5)).to.changeTokenBalance(
@@ -504,35 +519,30 @@ describe('Data and Manager tests', () => {
 
         const gov = await Governance.connect(signerArray[3])
         const Torn = (await getToken(torn)).connect(signerArray[3])
+        const staking = await StakingContract.connect(signerArray[3])
 
         await Torn.approve(gov.address, k5)
         await gov.lockWithApproval(k5)
+        await staking.getReward()
 
         const balance = await gov.lockedBalance(signerArray[3].address)
 
         expect(balance).to.equal(k5)
       })
 
-      it('Should properly harvest rewards if someone calls lockWithApproval(0)', async function () {
-        const initialBalance = (await Governance.lockedBalance(signerArray[2].address)).toString()
-
-        const gov = await Governance.connect(signerArray[2])
-
-        await gov.lockWithApproval(0)
-
-        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance)
-      })
-
-      it('Should properly harvest rewards if someone calls unlock', async function () {
+      it('Should properly harvest rewards if someone calls getReward', async function () {
         const Torn = await getToken(torn)
 
-        const initialBalance = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
 
-        const gov = await Governance.connect(signerArray[0])
+        let staking = await StakingContract.connect(signerArray[0])
+        await staking.getReward()
+        staking = await StakingContract.connect(signerArray[2])
+        await staking.getReward()
 
-        await gov.unlock(0)
-
-        expect(await Torn.balanceOf(signerArray[0].address)).to.be.gt(initialBalance)
+        expect(await Governance.lockedBalance(signerArray[0].address)).to.be.gt(initialBalance0)
+        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance1)
       })
 
       it('Second harvest shouldnt work if no withdraw was made', async () => {
@@ -541,20 +551,25 @@ describe('Data and Manager tests', () => {
         const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
         const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
 
-        let gov = await Governance.connect(signerArray[0])
-        await gov.unlock(0)
-        gov = await Governance.connect(signerArray[1])
-        await gov.unlock(0)
+        let staking = await StakingContract.connect(signerArray[0])
+        await staking.getReward()
+        staking = await StakingContract.connect(signerArray[2])
+        await staking.getReward()
 
         expect(await Torn.balanceOf(signerArray[0].address)).to.be.equal(initialBalance0)
         expect(await Torn.balanceOf(signerArray[2].address)).to.be.equal(initialBalance1)
+      })
+
+      it('It should NOT be possible to withdraw more than you have', async () => {
+        let gov = await Governance.connect(signerArray[0])
+        await expect(gov.unlock(ethers.utils.parseEther('5000000'))).to.be.reverted
       })
     })
 
     describe('Test staking to relayer', () => {
       it('Should be able to withdraw some torn from governance and stake to a relayer', async () => {
         const gov = await Governance.connect(signerArray[0])
-        const k1 = ethers.utils.parseEther('1000')
+        const k1 = ethers.utils.parseEther('100')
         const Torn = (await getToken(torn)).connect(signerArray[0])
 
         await expect(() => gov.unlock(k1)).to.changeTokenBalance(await getToken(torn), signerArray[0], k1)
@@ -566,26 +581,6 @@ describe('Data and Manager tests', () => {
         await registry.stakeToRelayer(relayers[0].address, k1)
 
         expect(await registry.getRelayerBalance(relayers[0].address)).to.be.gt(k1)
-      })
-
-      it('Third harvest shouldnt work if no withdraw was made', async () => {
-        const Torn = await getToken(torn)
-
-        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
-        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
-
-        let gov = await Governance.connect(signerArray[0])
-        await gov.unlock(0)
-        gov = await Governance.connect(signerArray[1])
-        await gov.unlock(0)
-
-        expect(await Torn.balanceOf(signerArray[0].address)).to.be.equal(initialBalance0)
-        expect(await Torn.balanceOf(signerArray[2].address)).to.be.equal(initialBalance1)
-      })
-
-      it('It should NOT be possible to withdraw more than you have', async () => {
-        let gov = await Governance.connect(signerArray[0])
-        await expect(gov.unlock(ethers.utils.parseEther('5000000'))).to.be.reverted
       })
 
       it('Should succesfully deposit and withdraw from / into the instance we staked to', async function () {
@@ -637,15 +632,29 @@ describe('Data and Manager tests', () => {
         expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
       })
 
-      it('Should properly harvest all three rewards with lockWithApproval(0)', async function () {
+      it('Signer at index 1 should have largest accumulatedRewards and 2 > 0', async () => {
         for (let i = 0; i < 3; i++) {
-          const initialBalance = (await Governance.lockedBalance(signerArray[i].address)).toString()
-
           const gov = await Governance.connect(signerArray[i])
+          await gov.unlock(0)
+        }
+        const balanceS1 = await StakingContract.accumulatedRewards(signerArray[1].address)
+        const balanceS2 = await StakingContract.accumulatedRewards(signerArray[2].address)
+        const balanceS0 = await StakingContract.accumulatedRewards(signerArray[0].address)
 
-          await gov.lockWithApproval(0)
+        expect(balanceS2).to.be.gt(balanceS0)
+        expect(balanceS1).to.be.gt(balanceS2)
 
-          expect(await Governance.lockedBalance(signerArray[i].address)).to.be.gt(initialBalance)
+        console.log('Signer 0 accumulatedRewards: ', balanceS0.toString())
+        console.log('Signer 1 accumulatedRewards: ', balanceS1.toString())
+        console.log('Signer 2 accumulatedRewards: ', balanceS2.toString())
+      })
+
+      it('Should harvest those rewards again', async () => {
+        for (let i = 0; i < 3; i++) {
+          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
+          const staking = await StakingContract.connect(signerArray[i])
+          await staking.getReward()
+          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
         }
       })
     })

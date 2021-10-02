@@ -45,7 +45,12 @@ contract RelayerRegistry is Initializable {
 
   event RelayerBalanceNullified(address indexed relayer);
   event RelayerChangedFee(address indexed relayer, uint248 indexed newFee);
+  event SubaddressRegistered(address indexed subaddress);
+  event SubaddressUnregistered(address indexed subaddress);
   event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
+  event StakeBurned(address indexed relayer, uint256 indexed amountBurned);
+  event NewMinimumStakeAmount(uint256 indexed minStakeAmount);
+  event NewProxyRegistered(address indexed tornadoProxy);
   event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint248 indexed fee, uint256 indexed stakedAmount);
 
   modifier onlyGovernanceCallForwarder() {
@@ -84,7 +89,7 @@ contract RelayerRegistry is Initializable {
     bytes32 ensHash,
     uint128 fee,
     uint128 stake,
-    address[] memory toRegister
+    address[] memory subaddressesToRegister
   ) external onlyENSOwner(ensHash) {
     RelayerMetadata storage metadata = getMetadataForRelayer[msg.sender];
 
@@ -98,9 +103,9 @@ contract RelayerRegistry is Initializable {
     metadata.ensHash = ensHash;
     getMasterForSubaddress[msg.sender] = msg.sender;
 
-    for (uint256 i = 0; i < toRegister.length; i++) {
-      require(getMasterForSubaddress[toRegister[i]] == address(0), "can't steal an address");
-      getMasterForSubaddress[toRegister[i]] = msg.sender;
+    for (uint256 i = 0; i < subaddressesToRegister.length; i++) {
+      require(getMasterForSubaddress[subaddressesToRegister[i]] == address(0), "can't steal an address");
+      getMasterForSubaddress[subaddressesToRegister[i]] = msg.sender;
     }
 
     emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
@@ -109,19 +114,20 @@ contract RelayerRegistry is Initializable {
   function registerSubaddress(address relayer, address subaddress) external {
     require(getMasterForSubaddress[msg.sender] == relayer, "only relayer");
     getMasterForSubaddress[subaddress] = relayer;
+    emit SubaddressRegistered(subaddress);
   }
 
-  function unregisterSubaddress(address account, bool burn) external {
-    require(msg.sender == account, "can only unregister self");
-    if (burn) _nullifyBalance(getMasterForSubaddress[account]);
-    getMasterForSubaddress[account] = address(0);
+  function unregisterSubaddress(address subaddress) external {
+    require(msg.sender == subaddress, "can only unregister self");
+    getMasterForSubaddress[subaddress] = address(0);
+    emit SubaddressUnregistered(subaddress);
   }
 
   function stakeToRelayer(address relayer, uint128 stake) external {
     require(getMasterForSubaddress[relayer] == relayer, "!registered");
     _sendStakeToStaking(msg.sender, stake);
-    emit StakeAddedToRelayer(relayer, stake);
     getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
+    emit StakeAddedToRelayer(relayer, stake);
   }
 
   function burn(
@@ -132,6 +138,7 @@ contract RelayerRegistry is Initializable {
     uint128 toBurn = uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)));
     getMetadataForRelayer[relayer].intData.balance = uint128(getMetadataForRelayer[relayer].intData.balance.sub(toBurn));
     Staking.addBurnRewards(toBurn);
+    emit StakeBurned(relayer, toBurn);
   }
 
   function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
@@ -141,10 +148,12 @@ contract RelayerRegistry is Initializable {
 
   function setMinStakeAmount(uint256 minAmount) external onlyGovernanceCallForwarder {
     minStakeAmount = minAmount;
+    emit NewMinimumStakeAmount(minAmount);
   }
 
   function registerProxy(address tornadoProxyAddress) external onlyGovernanceCallForwarder {
     tornadoProxy = tornadoProxyAddress;
+    emit NewProxyRegistered(tornadoProxyAddress);
   }
 
   function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {

@@ -7,7 +7,7 @@
       "hash": "0x0798408660f840ee3d6b39ec0f1e2ed9abb91cbf578a7fbaa9dba8c5b99f51b2",
       "type": 2,
       "accessList": [],
-      "blockHash": "0x56a2bd02a5248f9ce98c2098e50717aafa8a53fefe64a583fad1eb6bc57950ff",
+      "blockHash": "0xd7b2e7bb07891dcad262b916fa7b6dbad057e5316645413a0613e92eeb069327",
       "blockNumber": 13327016,
       "transactionIndex": 0,
       "confirmations": 1,
@@ -161,17 +161,17 @@
         }
       }
     },
-    "4606c77f0469d48a2fa7922ae9c22c4a855f4497028345c09ddf60ad91054a17": {
+    "211dd4b15410e6cc8f72103209ce956a391375f76e21040486a04c914ab20538": {
       "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-      "txHash": "0x23d73cc0b26282a10bc4ef99902671d8289f742fc09aaac619c0f302e9d46d63",
+      "txHash": "0x7c019be8dcf5a949f9e7534f2f3d8ed2bacda5bfad5f99362969e7b804e22b12",
       "layout": {
         "storage": [],
         "types": {}
       }
     },
-    "a7eedfe105420aa77aabdad3380cd0ca4cfd94bfb4c6694f8660e5ae118a3227": {
+    "9d6b87f25c7c5efad43160e3857d6c3a41275763da51dbd6902f6837a416ff50": {
       "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-      "txHash": "0xbe8a1a00122a5d0ea749c5dc6522350f0a7464208b16f2f2b2f0b8e34dc701f5",
+      "txHash": "0x93908e6d06b516399b6de7affcfb03f40c33b46b96c2e9649b266c91edb2d358",
       "layout": {
         "storage": [
           {
@@ -207,13 +207,13 @@
           {
             "contract": "RelayerRegistry",
             "label": "Staking",
-            "type": "t_contract(ITornadoStakingRewards)3997",
+            "type": "t_contract(ITornadoStakingRewards)4037",
             "src": "contracts/RelayerRegistry.sol:37"
           },
           {
             "contract": "RelayerRegistry",
             "label": "RegistryData",
-            "type": "t_contract(RelayerRegistryData)5895",
+            "type": "t_contract(RelayerRegistryData)5860",
             "src": "contracts/RelayerRegistry.sol:38"
           },
           {
@@ -231,7 +231,7 @@
           {
             "contract": "RelayerRegistry",
             "label": "getMetadataForRelayer",
-            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4015_storage)",
+            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4055_storage)",
             "src": "contracts/RelayerRegistry.sol:43"
           },
           {
@@ -248,24 +248,24 @@
           "t_contract(IERC20)1607": {
             "label": "contract IERC20"
           },
-          "t_contract(ITornadoStakingRewards)3997": {
+          "t_contract(ITornadoStakingRewards)4037": {
             "label": "contract ITornadoStakingRewards"
           },
-          "t_contract(RelayerRegistryData)5895": {
+          "t_contract(RelayerRegistryData)5860": {
             "label": "contract RelayerRegistryData"
           },
           "t_uint256": {
             "label": "uint256"
           },
-          "t_mapping(t_address,t_struct(RelayerMetadata)4015_storage)": {
+          "t_mapping(t_address,t_struct(RelayerMetadata)4055_storage)": {
             "label": "mapping(address => struct RelayerMetadata)"
           },
-          "t_struct(RelayerMetadata)4015_storage": {
+          "t_struct(RelayerMetadata)4055_storage": {
             "label": "struct RelayerMetadata",
             "members": [
               {
                 "label": "intData",
-                "type": "t_struct(RelayerIntegerMetadata)4010_storage"
+                "type": "t_struct(RelayerIntegerMetadata)4050_storage"
               },
               {
                 "label": "ensHash",
@@ -273,7 +273,7 @@
               }
             ]
           },
-          "t_struct(RelayerIntegerMetadata)4010_storage": {
+          "t_struct(RelayerIntegerMetadata)4050_storage": {
             "label": "struct RelayerIntegerMetadata",
             "members": [
               {

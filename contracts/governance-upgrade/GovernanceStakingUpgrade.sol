@@ -6,33 +6,29 @@ pragma experimental ABIEncoderV2;
 import { GovernanceGasUpgrade } from "../../submodules/tornado-lottery-period/contracts/gas/GovernanceGasUpgrade.sol";
 
 interface ITornadoStakingRewards {
-  function claimFor(
-    address staker,
-    address recipient,
-    uint256 amountLockedBeforehand
-  ) external returns (uint256, bool);
-}
-
-interface IRegistryCallForwarder {
-  function forwardIsRelayer(address toResolve) external view returns (bool);
+  function updateRewardsOnLockedBalanceChange(address account, uint256 amountLockedBeforehand) external;
 }
 
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
-  IRegistryCallForwarder public immutable RegistryCallForwarder;
+
+  event RewardUpdateSuccessful(address indexed account);
+  event RewardUpdateFailed(address indexed account, bytes indexed errorData);
 
   constructor(
     address stakingRewardsAddress,
-    address registryCallForwarderAddress,
     address gasCompLogic,
     address userVaultAddress
   ) public GovernanceGasUpgrade(gasCompLogic, userVaultAddress) {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
-    RegistryCallForwarder = IRegistryCallForwarder(registryCallForwarderAddress);
   }
 
-  modifier onlyNonRelayer(address account) {
-    require(!RegistryCallForwarder.forwardIsRelayer(account), "only non relayer");
+  modifier updateRewards(address account) {
+    try Staking.updateRewardsOnLockedBalanceChange(account, lockedBalance[account]) {
+      emit RewardUpdateSuccessful(account);
+    } catch (bytes memory errorData) {
+      emit RewardUpdateFailed(account, errorData);
+    }
     _;
   }
 
@@ -43,28 +39,16 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external virtual override onlyNonRelayer(owner) {
-    (uint256 claimed, bool success) = Staking.claimFor(owner, address(userVault), lockedBalance[owner]);
-    if (!success) claimed = 0;
-
+  ) external virtual override updateRewards(owner) {
     torn.permit(owner, address(this), amount, deadline, v, r, s);
     _transferTokens(owner, amount);
-
-    if (success) lockedBalance[owner] = lockedBalance[owner].add(claimed);
   }
 
-  function lockWithApproval(uint256 amount) external virtual override onlyNonRelayer(msg.sender) {
-    (uint256 claimed, bool success) = Staking.claimFor(msg.sender, address(userVault), lockedBalance[msg.sender]);
-    if (!success) claimed = 0;
-
+  function lockWithApproval(uint256 amount) external virtual override updateRewards(msg.sender) {
     _transferTokens(msg.sender, amount);
-
-    if (success) lockedBalance[msg.sender] = lockedBalance[msg.sender].add(claimed);
   }
 
-  function unlock(uint256 amount) external virtual override onlyNonRelayer(msg.sender) {
-    Staking.claimFor(msg.sender, msg.sender, lockedBalance[msg.sender]);
-
+  function unlock(uint256 amount) external virtual override updateRewards(msg.sender) {
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
     userVault.withdrawTorn(msg.sender, amount);
