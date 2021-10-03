@@ -11,7 +11,9 @@
     "lint": "yarn eslint && yarn prettier:check",
     "test:all": "yarn hardhat test",
     "test": "yarn test:all test/test_all",
+    "test:gas": "yarn test:all test/test_gas",
     "f:test": "yarn prettier:fix && yarn test && yarn lint",
+    "f:test:gas": "yarn prettier:fix && yarn test:gas && yarn lint",
     "compile": "yarn prettier:fix && yarn hardhat compile",
     "clean": "yarn prettier:fix && yarn lint"
   },
