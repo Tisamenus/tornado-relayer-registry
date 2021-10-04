@@ -181,7 +181,7 @@ contract RelayerRegistry is Initializable {
    * @notice This function should allow relayers to set their fee
    * @dev There is the possiblity of discussing a cooldown period
    * @param relayer Relayer main address to stake to
-   * @param stake Stake to be added to relayer
+   * @param newFee new fee relayer institutes
    * */
   function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
     getMetadataForRelayer[relayer].intData.fee = newFee;

@@ -77,7 +77,7 @@ library UniswapV3OracleHelper {
    * @notice This function returns the price of token[1] in token[0], but more precisely and importantly the price ratio of the tokens in WETH
    * @dev this is done as to always have good prices due to WETH-token pools mostly always having the most liquidity
    * @param tokens array of tokens to get ratio for
-   * @param fee the uniswap pool FEES, since these are two independent tokens
+   * @param fees the uniswap pool FEES, since these are two independent tokens
    * @param period the amount of seconds we are going to look into the past for the new token price
    * @return returns the price of token[1] in token[0]
    * */
