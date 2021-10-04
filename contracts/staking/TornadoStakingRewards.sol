@@ -120,7 +120,7 @@ contract TornadoStakingRewards is ReentrancyGuard {
    *      - result may go to 0, since this implies on 1 TORN locked => accumulatedReward <= 1e7, meaning a very small reward
    * @param account address of account to calculate rewards for
    * @param amountLockedBeforehand the balance locked beforehand in the governance contract
-   * @return return the rewards attributed to user since the last update
+   * @return claimed the rewards attributed to user since the last update
    */
   function _updateReward(address account, uint256 amountLockedBeforehand) private returns (uint256 claimed) {
     claimed = (accumulatedRewardPerTorn.sub(accumulatedRewardRateOnLastUpdate[account])).mul(amountLockedBeforehand).div(

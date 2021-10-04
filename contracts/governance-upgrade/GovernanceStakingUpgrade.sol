@@ -43,7 +43,6 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _;
   }
 
-  /// @inheritdoc GovernanceGasUpgrade
   function lock(
     address owner,
     uint256 amount,
@@ -56,12 +55,10 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(owner, amount);
   }
 
-  /// @inheritdoc GovernanceGasUpgrade
   function lockWithApproval(uint256 amount) external virtual override updateRewards(msg.sender) {
     _transferTokens(msg.sender, amount);
   }
 
-  /// @inheritdoc GovernanceGasUpgrade
   function unlock(uint256 amount) external virtual override updateRewards(msg.sender) {
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
