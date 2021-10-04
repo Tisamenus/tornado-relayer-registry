@@ -26,6 +26,16 @@ struct RelayerMetadata {
   bytes32 ensHash;
 }
 
+/**
+ * @notice Registry contract, one of the main contracts of this protocol upgrade.
+ *         The contract should store relayers' addresses and data attributed to the
+ *         master address of the relayer. This data includes the relayers' stake and the fee
+ *         he charges.
+ * @dev CONTRACT RISKS:
+ *      - if setter functions are compromised, relayer metadata would be at risk, including the noted amount of his balance
+ *      - if burn function is compromised, relayers run the risk of being unable to handle withdrawals
+ *      - the above risk also applies to the nullify balance function
+ * */
 contract RelayerRegistry is Initializable {
   using SafeMath for uint256;
   using SafeMath for uint128;
@@ -73,6 +83,11 @@ contract RelayerRegistry is Initializable {
     _;
   }
 
+  /**
+   * @notice initialize function for upgradeability
+   * @dev this contract will be deployed behind a proxy and should not assign values at logic address,
+   *      params left out because self explainable
+   * */
   function initialize(
     address registryDataAddress,
     address tornadoGovernance,

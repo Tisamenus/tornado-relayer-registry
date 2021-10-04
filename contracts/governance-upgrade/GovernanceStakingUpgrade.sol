@@ -9,6 +9,12 @@ interface ITornadoStakingRewards {
   function updateRewardsOnLockedBalanceChange(address account, uint256 amountLockedBeforehand) external;
 }
 
+/**
+ * @notice The Governance staking upgrade. Adds modifier to any un/lock operation to update rewards
+ * @dev CONTRACT RISKS:
+ *      - if updateRewards reverts (should not happen due to try/catch) locks/unlocks could be blocked
+ *      - generally inherits risks from former governance upgrades
+ */
 contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
   ITornadoStakingRewards public immutable Staking;
 
@@ -23,6 +29,11 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     Staking = ITornadoStakingRewards(stakingRewardsAddress);
   }
 
+  /**
+   * @notice This modifier should make a call to Staking to update the rewards for account without impacting logic on revert
+   * @dev try / catch block to handle reverts
+   * @param account Account to update rewards for.
+   * */
   modifier updateRewards(address account) {
     try Staking.updateRewardsOnLockedBalanceChange(account, lockedBalance[account]) {
       emit RewardUpdateSuccessful(account);
@@ -32,6 +43,7 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _;
   }
 
+  /// @inheritdoc GovernanceGasUpgrade
   function lock(
     address owner,
     uint256 amount,
@@ -44,10 +56,12 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     _transferTokens(owner, amount);
   }
 
+  /// @inheritdoc GovernanceGasUpgrade
   function lockWithApproval(uint256 amount) external virtual override updateRewards(msg.sender) {
     _transferTokens(msg.sender, amount);
   }
 
+  /// @inheritdoc GovernanceGasUpgrade
   function unlock(uint256 amount) external virtual override updateRewards(msg.sender) {
     require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
     lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
