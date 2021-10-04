@@ -16,6 +16,16 @@ library UniswapV3OracleHelper {
   IUniswapV3Factory public constant UniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
   address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+  /**
+  * @notice This function should return the price of baseToken in quoteToken, as in: quote/base (WETH/TORN)
+  * @dev uses the Uniswap written OracleLibrary "getQuoteAtTick", does not call external libraries,
+  *      uses decimals() for the correct power of 10
+  * @param baseToken token which will be denominated in quote token
+  * @param quoteToken token in which price will be denominated
+  * @param fee the uniswap pool fee, pools have different fees so this is a pool selector for our usecase
+  * @param period the amount of seconds we are going to look into the past for the new token price
+  * @return returns the price of baseToken in quoteToken
+  * */
   function getPriceOfTokenInToken(
     address baseToken,
     address quoteToken,
@@ -31,6 +41,14 @@ library UniswapV3OracleHelper {
       );
   }
 
+  /**
+  * @notice This function should return the price of token in WETH
+  * @dev simply feeds WETH in to the above function 
+  * @param token token which will be denominated in WETH
+  * @param fee the uniswap pool fee, pools have different fees so this is a pool selector for our usecase
+  * @param period the amount of seconds we are going to look into the past for the new token price
+  * @return returns the price of token in WETH
+  * */
   function getPriceOfTokenInWETH(
     address token,
     uint24 fee,
@@ -39,6 +57,14 @@ library UniswapV3OracleHelper {
     return getPriceOfTokenInToken(token, WETH, fee, period);
   }
 
+  /**
+  * @notice This function should return the price of WETH in token
+  * @dev simply feeds WETH into getPriceOfTokenInToken
+  * @param token token which WETH will be denominated in
+  * @param fee the uniswap pool fee, pools have different fees so this is a pool selector for our usecase
+  * @param period the amount of seconds we are going to look into the past for the new token price
+  * @return returns the price of token in WETH
+  * */
   function getPriceOfWETHInToken(
     address token,
     uint24 fee,
@@ -47,6 +73,14 @@ library UniswapV3OracleHelper {
     return getPriceOfTokenInToken(WETH, token, fee, period);
   }
 
+  /**
+  * @notice This function returns the price of token[1] in token[0], but more precisely and importantly the price ratio of the tokens in WETH
+  * @dev this is done as to always have good prices due to WETH-token pools mostly always having the most liquidity
+  * @param tokens array of tokens to get ratio for
+  * @param fee the uniswap pool FEES, since these are two independent tokens
+  * @param period the amount of seconds we are going to look into the past for the new token price
+  * @return returns the price of token[1] in token[0]
+  * */
   function getPriceRatioOfTokens(
     address[2] memory tokens,
     uint24[2] memory fees,

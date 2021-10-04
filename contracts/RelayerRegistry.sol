@@ -85,6 +85,13 @@ contract RelayerRegistry is Initializable {
     torn = IERC20(tornTokenAddress);
   }
 
+  /**
+  * @notice This function should register a master address and optionally a set of subaddresses for a relayer + metadata
+  * @dev Relayer can't steal other relayers subaddresses since they are registered, and a wallet (msg.sender check) can always unregister itself
+  * @param ensHash ensHash of the relayer
+  * @param fee the fee the relayer will charge for withdrawals
+  * @param stake the initial amount of stake in TORN the relayer is depositing
+  * */
   function register(
     bytes32 ensHash,
     uint128 fee,
@@ -111,18 +118,35 @@ contract RelayerRegistry is Initializable {
     emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
   }
 
+  /**
+  * @notice This function should allow relayers to register more subaddresses
+  * @param relayer Relayer which should send message from any subaddress which is already registered
+  * @param subaddress Address to register
+  * */
   function registerSubaddress(address relayer, address subaddress) external {
     require(getMasterForSubaddress[msg.sender] == relayer, "only relayer");
     getMasterForSubaddress[subaddress] = relayer;
     emit SubaddressRegistered(subaddress);
   }
 
+  /**
+  * @notice This function should allow anybody to unregister an address they own
+  * @dev designed this way as to allow someone to unregister themselves in case a relayer misbehaves
+  *      - this should be followed by an action like burning relayer stake
+  *      - there was an option of allowing the sender to burn relayer stake in case of malicious behaviour, this feature was not included in the end
+  * @param subaddress Address to unregister
+  * */
   function unregisterSubaddress(address subaddress) external {
     require(msg.sender == subaddress, "can only unregister self");
     getMasterForSubaddress[subaddress] = address(0);
     emit SubaddressUnregistered(subaddress);
   }
 
+  /**
+  * @notice This function should allow anybody to stake to a relayer more TORN
+  * @param relayer Relayer main address to stake to
+  * @param stake Stake to be added to relayer
+  * */
   function stakeToRelayer(address relayer, uint128 stake) external {
     require(getMasterForSubaddress[relayer] == relayer, "!registered");
     _sendStakeToStaking(msg.sender, stake);
@@ -130,6 +154,18 @@ contract RelayerRegistry is Initializable {
     emit StakeAddedToRelayer(relayer, stake);
   }
 
+  /**
+  * @notice This function should burn some relayer stake on withdraw and notify staking of this
+  * @dev IMPORTANT FUNCTION: 
+  *      - This should be only called by the tornado proxy
+  *      - Should revert if relayer does not call proxy from valid subaddress
+  *      - Should not overflow 
+  *      - Requirement with uint128 = total supply * 0.01 of an ERC20 should not exceed 1e38
+  *      - Should underflow and revert (SafeMath) on not enough stake (balance)
+  * @param sender subaddress to check sender == relayer
+  * @param relayer address of relayer who's stake is being burned
+  * @param poolAddress instance address to get proper fee
+  * */
   function burn(
     address sender,
     address relayer,
@@ -141,51 +177,108 @@ contract RelayerRegistry is Initializable {
     emit StakeBurned(relayer, toBurn);
   }
 
+  /**
+  * @notice This function should allow relayers to set their fee
+  * @dev There is the possiblity of discussing a cooldown period
+  * @param relayer Relayer main address to stake to
+  * @param stake Stake to be added to relayer
+  * */
   function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
     getMetadataForRelayer[relayer].intData.fee = newFee;
     emit RelayerChangedFee(relayer, uint128(newFee));
   }
 
+  /**
+  * @notice This function should allow governance to set the minimum stake amount
+  * @param minAmount new minimum stake amount
+  * */
   function setMinStakeAmount(uint256 minAmount) external onlyGovernanceCallForwarder {
     minStakeAmount = minAmount;
     emit NewMinimumStakeAmount(minAmount);
   }
 
+  /**
+  * @notice This function should allow governance to set a new tornado proxy address
+  * @param tornadoProxyAddress address of the new proxy
+  * */
   function registerProxy(address tornadoProxyAddress) external onlyGovernanceCallForwarder {
     tornadoProxy = tornadoProxyAddress;
     emit NewProxyRegistered(tornadoProxyAddress);
   }
 
+  /**
+  * @notice This function should allow governance to nullify a relayers balance
+  * @dev IMPORTANT FUNCTION
+  * @param relayer address of relayer who's balance is to nullify
+  * */
   function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
     _nullifyBalance(relayer);
   }
 
+  /**
+  * @notice This function should return a relayers fee
+  * @param relayer address of relayer who's fee is to fetch
+  * @return the fee
+  * */
   function getRelayerFee(address relayer) external view returns (uint128) {
     return getMetadataForRelayer[relayer].intData.fee;
   }
 
+  /**
+  * @notice This function should check if a subaddress is associated with a relayer
+  * @param toResolve address to check
+  * @return true if is associated
+  * */
   function isRelayer(address toResolve) external view returns (bool) {
     return getMasterForSubaddress[toResolve] != address(0);
   }
 
+  /**
+  * @notice This function should check if a subaddress is registered to the relayer stated
+  * @param relayer relayer to check
+  * @param toResolve address to check
+  * @return true if registered
+  * */
   function isRelayerRegistered(address relayer, address toResolve) external view returns (bool) {
     return getMasterForSubaddress[toResolve] == relayer;
   }
 
+  /**
+  * @notice This function should get a relayers ensHash
+  * @param relayer address to fetch for
+  * @return relayer's ensHash
+  * */
   function getRelayerEnsHash(address relayer) external view returns (bytes32) {
     return getMetadataForRelayer[relayer].ensHash;
   }
 
+  /**
+  * @notice This function should get a relayers balance
+  * @param relayer relayer who's balance is to fetch
+  * @return relayer's balance
+  * */
   function getRelayerBalance(address relayer) external view returns (uint128) {
     return getMetadataForRelayer[relayer].intData.balance;
   }
 
+  /**
+  * @notice This function nullify a relayers balance
+  * @dev IMPORTANT FUNCTION:
+  *      - Should add his entire rest balance as burned rewards
+  *      - Should nullify the balance
+  * @param relayer relayer who's balance is to nullify
+  * */
   function _nullifyBalance(address relayer) private {
     Staking.addBurnRewards(getMetadataForRelayer[relayer].intData.balance);
     getMetadataForRelayer[relayer].intData.balance = 0;
     emit RelayerBalanceNullified(relayer);
   }
 
+  /**
+  * @notice This function should send TORN to Staking
+  * @param sender address to transfer from
+  * @param stake amount to transfer
+  * */
   function _sendStakeToStaking(address sender, uint256 stake) private {
     require(torn.transferFrom(sender, address(Staking), stake), "transfer failed");
   }
