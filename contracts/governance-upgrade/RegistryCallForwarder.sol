@@ -31,7 +31,7 @@ contract RegistryCallForwarder {
     Registry.nullifyBalance(relayer);
   }
 
-  function getRegistryData() external returns (RelayerRegistryData) {
+  function getRegistryData() external view returns (RelayerRegistryData) {
     return Registry.RegistryData();
   }
 }

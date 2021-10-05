@@ -374,8 +374,6 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should succesfully register all relayers', async function () {
-        const fee = ethers.utils.parseEther('0.1')
-
         for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
             .connect(relayers[i].wallet)
@@ -383,11 +381,10 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-          await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [])
+          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), [])
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
-          expect(await RelayerRegistry.getRelayerFee(relayers[i].address)).to.equal(fee)
         }
       })
     })

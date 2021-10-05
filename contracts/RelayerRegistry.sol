@@ -16,20 +16,15 @@ interface IENS {
   function owner(bytes32 node) external view returns (address);
 }
 
-struct RelayerIntegerMetadata {
-  uint128 balance;
-  uint128 fee;
-}
-
 struct RelayerMetadata {
-  RelayerIntegerMetadata intData;
+  uint256 balance;
   bytes32 ensHash;
 }
 
 /**
  * @notice Registry contract, one of the main contracts of this protocol upgrade.
  *         The contract should store relayers' addresses and data attributed to the
- *         master address of the relayer. This data includes the relayers' stake and the fee
+ *         master address of the relayer. This data includes the relayers' stake
  *         he charges.
  * @dev CONTRACT RISKS:
  *      - if setter functions are compromised, relayer metadata would be at risk, including the noted amount of his balance
@@ -38,7 +33,6 @@ struct RelayerMetadata {
  * */
 contract RelayerRegistry is Initializable {
   using SafeMath for uint256;
-  using SafeMath for uint128;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
   address public governanceCallForwarder;
@@ -54,14 +48,13 @@ contract RelayerRegistry is Initializable {
   mapping(address => address) public getMasterForSubaddress;
 
   event RelayerBalanceNullified(address indexed relayer);
-  event RelayerChangedFee(address indexed relayer, uint248 indexed newFee);
   event SubaddressRegistered(address indexed subaddress);
   event SubaddressUnregistered(address indexed subaddress);
   event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
   event StakeBurned(address indexed relayer, uint256 indexed amountBurned);
   event NewMinimumStakeAmount(uint256 indexed minStakeAmount);
   event NewProxyRegistered(address indexed tornadoProxy);
-  event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint248 indexed fee, uint256 indexed stakedAmount);
+  event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint256 indexed stakedAmount);
 
   modifier onlyGovernanceCallForwarder() {
     require(msg.sender == governanceCallForwarder, "only governance");
@@ -104,24 +97,22 @@ contract RelayerRegistry is Initializable {
    * @notice This function should register a master address and optionally a set of subaddresses for a relayer + metadata
    * @dev Relayer can't steal other relayers subaddresses since they are registered, and a wallet (msg.sender check) can always unregister itself
    * @param ensHash ensHash of the relayer
-   * @param fee the fee the relayer will charge for withdrawals
    * @param stake the initial amount of stake in TORN the relayer is depositing
    * */
   function register(
     bytes32 ensHash,
-    uint128 fee,
-    uint128 stake,
+    uint256 stake,
     address[] memory subaddressesToRegister
   ) external onlyENSOwner(ensHash) {
     RelayerMetadata storage metadata = getMetadataForRelayer[msg.sender];
 
     require(metadata.ensHash == bytes32(0), "registered already");
-    require(stake.add(metadata.intData.balance) >= minStakeAmount, "!min_stake");
+    require(stake.add(metadata.balance) >= minStakeAmount, "!min_stake");
 
     _sendStakeToStaking(msg.sender, stake);
     emit StakeAddedToRelayer(msg.sender, stake);
 
-    metadata.intData = RelayerIntegerMetadata(stake, fee);
+    metadata.balance = stake;
     metadata.ensHash = ensHash;
     getMasterForSubaddress[msg.sender] = msg.sender;
 
@@ -130,7 +121,7 @@ contract RelayerRegistry is Initializable {
       getMasterForSubaddress[subaddressesToRegister[i]] = msg.sender;
     }
 
-    emit NewRelayerRegistered(ensHash, msg.sender, fee, stake);
+    emit NewRelayerRegistered(ensHash, msg.sender, stake);
   }
 
   /**
@@ -162,10 +153,10 @@ contract RelayerRegistry is Initializable {
    * @param relayer Relayer main address to stake to
    * @param stake Stake to be added to relayer
    * */
-  function stakeToRelayer(address relayer, uint128 stake) external {
+  function stakeToRelayer(address relayer, uint256 stake) external {
     require(getMasterForSubaddress[relayer] == relayer, "!registered");
     _sendStakeToStaking(msg.sender, stake);
-    getMetadataForRelayer[relayer].intData.balance = uint128(stake.add(getMetadataForRelayer[relayer].intData.balance));
+    getMetadataForRelayer[relayer].balance = uint256(stake.add(getMetadataForRelayer[relayer].balance));
     emit StakeAddedToRelayer(relayer, stake);
   }
 
@@ -175,7 +166,6 @@ contract RelayerRegistry is Initializable {
    *      - This should be only called by the tornado proxy
    *      - Should revert if relayer does not call proxy from valid subaddress
    *      - Should not overflow
-   *      - Requirement with uint128 = total supply * 0.01 of an ERC20 should not exceed 1e38
    *      - Should underflow and revert (SafeMath) on not enough stake (balance)
    * @param sender subaddress to check sender == relayer
    * @param relayer address of relayer who's stake is being burned
@@ -186,21 +176,10 @@ contract RelayerRegistry is Initializable {
     address relayer,
     address poolAddress
   ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
-    uint128 toBurn = uint128(RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress)));
-    getMetadataForRelayer[relayer].intData.balance = uint128(getMetadataForRelayer[relayer].intData.balance.sub(toBurn));
+    uint256 toBurn = RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress));
+    getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
-  }
-
-  /**
-   * @notice This function should allow relayers to set their fee
-   * @dev There is the possiblity of discussing a cooldown period
-   * @param relayer Relayer main address to stake to
-   * @param newFee new fee relayer institutes
-   * */
-  function setRelayerFee(address relayer, uint128 newFee) external onlyRelayer(msg.sender, relayer) {
-    getMetadataForRelayer[relayer].intData.fee = newFee;
-    emit RelayerChangedFee(relayer, uint128(newFee));
   }
 
   /**
@@ -228,15 +207,6 @@ contract RelayerRegistry is Initializable {
    * */
   function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
     _nullifyBalance(relayer);
-  }
-
-  /**
-   * @notice This function should return a relayers fee
-   * @param relayer address of relayer who's fee is to fetch
-   * @return the fee
-   * */
-  function getRelayerFee(address relayer) external view returns (uint128) {
-    return getMetadataForRelayer[relayer].intData.fee;
   }
 
   /**
@@ -272,8 +242,8 @@ contract RelayerRegistry is Initializable {
    * @param relayer relayer who's balance is to fetch
    * @return relayer's balance
    * */
-  function getRelayerBalance(address relayer) external view returns (uint128) {
-    return getMetadataForRelayer[relayer].intData.balance;
+  function getRelayerBalance(address relayer) external view returns (uint256) {
+    return getMetadataForRelayer[relayer].balance;
   }
 
   /**
@@ -284,8 +254,8 @@ contract RelayerRegistry is Initializable {
    * @param relayer relayer who's balance is to nullify
    * */
   function _nullifyBalance(address relayer) private {
-    Staking.addBurnRewards(getMetadataForRelayer[relayer].intData.balance);
-    getMetadataForRelayer[relayer].intData.balance = 0;
+    Staking.addBurnRewards(getMetadataForRelayer[relayer].balance);
+    getMetadataForRelayer[relayer].balance = 0;
     emit RelayerBalanceNullified(relayer);
   }
 

@@ -50,18 +50,15 @@ contract GovernanceStakingUpgrade is GovernanceGasUpgrade {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external virtual override updateRewards(owner) {
-    torn.permit(owner, address(this), amount, deadline, v, r, s);
-    _transferTokens(owner, amount);
+  ) public virtual override updateRewards(owner) {
+    super.lock(owner, amount, deadline, v, r, s);
   }
 
-  function lockWithApproval(uint256 amount) external virtual override updateRewards(msg.sender) {
-    _transferTokens(msg.sender, amount);
+  function lockWithApproval(uint256 amount) public virtual override updateRewards(msg.sender) {
+    super.lockWithApproval(amount);
   }
 
-  function unlock(uint256 amount) external virtual override updateRewards(msg.sender) {
-    require(getBlockTimestamp() > canWithdrawAfter[msg.sender], "Governance: tokens are locked");
-    lockedBalance[msg.sender] = lockedBalance[msg.sender].sub(amount, "Governance: insufficient balance");
-    userVault.withdrawTorn(msg.sender, amount);
+  function unlock(uint256 amount) public virtual override updateRewards(msg.sender) {
+    super.unlock(amount);
   }
 }

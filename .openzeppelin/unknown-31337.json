@@ -7,7 +7,7 @@
       "hash": "0x0798408660f840ee3d6b39ec0f1e2ed9abb91cbf578a7fbaa9dba8c5b99f51b2",
       "type": 2,
       "accessList": [],
-      "blockHash": "0xd36ae11f116e26e7647e63234813f8d6de8f01a6e940c9aeb600b4fa5ceeb874",
+      "blockHash": "0xc38065151f4a2f4eb219d1373f66cd5f3ed1f022478790f038025627560e08e5",
       "blockNumber": 13327016,
       "transactionIndex": 0,
       "confirmations": 1,
@@ -161,17 +161,17 @@
         }
       }
     },
-    "211dd4b15410e6cc8f72103209ce956a391375f76e21040486a04c914ab20538": {
+    "06815a1c10d02c8f9be768dbe64a83eee1d9c8b1b6274c3324c5c97d7964171f": {
       "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-      "txHash": "0x7c019be8dcf5a949f9e7534f2f3d8ed2bacda5bfad5f99362969e7b804e22b12",
+      "txHash": "0xa29dcdb1614a387e12062789aa2c35073b95574d1e501c657c6037d883812573",
       "layout": {
         "storage": [],
         "types": {}
       }
     },
-    "9d6b87f25c7c5efad43160e3857d6c3a41275763da51dbd6902f6837a416ff50": {
+    "1edd1aabf3eed0690cf3c0fb8364d523b9bbaaddde00e43fa96a83133514df82": {
       "address": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-      "txHash": "0x93908e6d06b516399b6de7affcfb03f40c33b46b96c2e9649b266c91edb2d358",
+      "txHash": "0xb2f3eb67cee2a4973877b1089322fc78d7736c67a104f445ec18cc68c3999488",
       "layout": {
         "storage": [
           {
@@ -196,49 +196,49 @@
             "contract": "RelayerRegistry",
             "label": "governanceCallForwarder",
             "type": "t_address",
-            "src": "contracts/RelayerRegistry.sol:34"
+            "src": "contracts/RelayerRegistry.sol:38"
           },
           {
             "contract": "RelayerRegistry",
             "label": "torn",
             "type": "t_contract(IERC20)1607",
-            "src": "contracts/RelayerRegistry.sol:36"
+            "src": "contracts/RelayerRegistry.sol:40"
           },
           {
             "contract": "RelayerRegistry",
             "label": "Staking",
             "type": "t_contract(ITornadoStakingRewards)4037",
-            "src": "contracts/RelayerRegistry.sol:37"
+            "src": "contracts/RelayerRegistry.sol:41"
           },
           {
             "contract": "RelayerRegistry",
             "label": "RegistryData",
-            "type": "t_contract(RelayerRegistryData)5860",
-            "src": "contracts/RelayerRegistry.sol:38"
+            "type": "t_contract(RelayerRegistryData)5767",
+            "src": "contracts/RelayerRegistry.sol:42"
           },
           {
             "contract": "RelayerRegistry",
             "label": "minStakeAmount",
             "type": "t_uint256",
-            "src": "contracts/RelayerRegistry.sol:40"
+            "src": "contracts/RelayerRegistry.sol:44"
           },
           {
             "contract": "RelayerRegistry",
             "label": "tornadoProxy",
             "type": "t_address",
-            "src": "contracts/RelayerRegistry.sol:41"
+            "src": "contracts/RelayerRegistry.sol:45"
           },
           {
             "contract": "RelayerRegistry",
             "label": "getMetadataForRelayer",
-            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4055_storage)",
-            "src": "contracts/RelayerRegistry.sol:43"
+            "type": "t_mapping(t_address,t_struct(RelayerMetadata)4050_storage)",
+            "src": "contracts/RelayerRegistry.sol:47"
           },
           {
             "contract": "RelayerRegistry",
             "label": "getMasterForSubaddress",
             "type": "t_mapping(t_address,t_address)",
-            "src": "contracts/RelayerRegistry.sol:44"
+            "src": "contracts/RelayerRegistry.sol:48"
           }
         ],
         "types": {
@@ -251,21 +251,21 @@
           "t_contract(ITornadoStakingRewards)4037": {
             "label": "contract ITornadoStakingRewards"
           },
-          "t_contract(RelayerRegistryData)5860": {
+          "t_contract(RelayerRegistryData)5767": {
             "label": "contract RelayerRegistryData"
           },
           "t_uint256": {
             "label": "uint256"
           },
-          "t_mapping(t_address,t_struct(RelayerMetadata)4055_storage)": {
+          "t_mapping(t_address,t_struct(RelayerMetadata)4050_storage)": {
             "label": "mapping(address => struct RelayerMetadata)"
           },
-          "t_struct(RelayerMetadata)4055_storage": {
+          "t_struct(RelayerMetadata)4050_storage": {
             "label": "struct RelayerMetadata",
             "members": [
               {
-                "label": "intData",
-                "type": "t_struct(RelayerIntegerMetadata)4050_storage"
+                "label": "balance",
+                "type": "t_uint256"
               },
               {
                 "label": "ensHash",
@@ -273,24 +273,8 @@
               }
             ]
           },
-          "t_struct(RelayerIntegerMetadata)4050_storage": {
-            "label": "struct RelayerIntegerMetadata",
-            "members": [
-              {
-                "label": "balance",
-                "type": "t_uint128"
-              },
-              {
-                "label": "fee",
-                "type": "t_uint128"
-              }
-            ]
-          },
           "t_bytes32": {
             "label": "bytes32"
-          },
-          "t_uint128": {
-            "label": "uint128"
           },
           "t_mapping(t_address,t_address)": {
             "label": "mapping(address => address)"
