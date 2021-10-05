@@ -26,12 +26,12 @@ jobs:
       - run: git submodule update
       - run: yarn prettier:fix
       - run: yarn lint
+      - run: yarn test
       - uses: actions/checkout@master
       - uses: codecov/codecov-action@v2
         with:
-          files: ./.solcover.js
+          files: ./coverage.json
           flags: unittests # optional
           name: codecov-umbrella # optional
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
-      - run: yarn test
