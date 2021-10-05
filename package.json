@@ -15,7 +15,8 @@
     "f:test": "yarn prettier:fix && yarn test && yarn lint",
     "f:test:gas": "yarn prettier:fix && yarn test:gas && yarn lint",
     "compile": "yarn prettier:fix && yarn hardhat compile",
-    "clean": "yarn prettier:fix && yarn lint"
+    "clean": "yarn prettier:fix && yarn lint",
+    "coverage": "yarn hardhat coverage --testfiles \"test/test_all.js\""
   },
   "repository": {
     "type": "git",
@@ -56,6 +57,7 @@
     "hardhat-storage-layout": "^0.1.6",
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
-    "solhint-plugin-prettier": "^0.0.5"
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.17"
   }
 }

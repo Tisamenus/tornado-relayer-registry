@@ -64,6 +64,7 @@ describe('Data and Manager tests', () => {
   let tornWhale
   let daiWhale
   let relayers = []
+  let impGov
 
   //// NORMAL ACCOUNTS
   let signerArray
@@ -92,7 +93,11 @@ describe('Data and Manager tests', () => {
     await ethers.provider.send('evm_mine', [])
   }
 
+  let snapshotIdArray = []
+
   before(async function () {
+    snapshotIdArray[0] = await sendr('evm_snapshot', [])
+
     signerArray = await ethers.getSigners()
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
@@ -211,7 +216,7 @@ describe('Data and Manager tests', () => {
       it('Should successfully imitate governance to transfer torn to vault,\n since we do this in the former proposal', async () => {
         await sendr('hardhat_impersonateAccount', [Governance.address])
         await sendr('hardhat_setBalance', [Governance.address, '0xDE0B6B3A7640000'])
-        const impGov = await ethers.getSigner(Governance.address)
+        impGov = await ethers.getSigner(Governance.address)
         const govTorn = (await await getToken(torn)).connect(impGov)
 
         await expect(() => govTorn.transfer(MockVault.address, approxVaultBalance)).to.changeTokenBalance(
@@ -318,6 +323,7 @@ describe('Data and Manager tests', () => {
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
         expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
+        expect(await TornadoProxy.Registry()).to.equal(RelayerRegistry.address)
       })
 
       it('Should pass initial fee update', async () => {
@@ -336,8 +342,15 @@ describe('Data and Manager tests', () => {
         for (let i = 0; i < tornadoPools.length; i++) {
           await RegistryData.updateAllFees()
           for (let j = 0; j < tornadoPools.length; j++) {
-            expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+            expect(await RegistryData.getFeeForPoolId(j)).to.be.gt(0)
           }
+        }
+      })
+
+      it('Should test repeatedly updating fees of specific pool and assure none return 0', async () => {
+        for (let i = 0; i < tornadoPools.length; i++) {
+          await RegistryData.updateFeeOfPool(i)
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
         }
       })
     })
@@ -385,7 +398,28 @@ describe('Data and Manager tests', () => {
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
+          expect(await RelayerRegistry.isRelayer(relayers[i].address)).to.be.true
+          expect(await RelayerRegistry.getRelayerEnsHash(relayers[i].address)).to.equal(relayers[i].node)
         }
+      })
+
+      it('Register subaddress should work', async () => {
+        await sendr('hardhat_impersonateAccount', [relayers[0].address])
+        const relayerWallet = await ethers.getSigner(relayers[0].address)
+        await signerArray[6].sendTransaction({
+          to: relayerWallet.address,
+          value: ethers.utils.parseEther('1'),
+        })
+
+        const registry = await RelayerRegistry.connect(relayerWallet)
+        await registry.registerSubaddress(relayers[0].address, signerArray[6].address)
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.true
+      })
+
+      it('Unregister should work', async () => {
+        const registry = await RelayerRegistry.connect(signerArray[6])
+        await registry.unregisterSubaddress()
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.false
       })
     })
 
@@ -653,6 +687,27 @@ describe('Data and Manager tests', () => {
           await staking.getReward()
           expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
         }
+      })
+    })
+
+    describe('Test governance interaction', () => {
+      it('Should nullify relayers balance', async () => {
+        const forwarder = await ForwarderContract.connect(impGov)
+        await forwarder.forwardNullifyBalance(relayers[3].address)
+
+        const balance = await RelayerRegistry.getRelayerBalance(relayers[3].address)
+
+        expect(balance).to.eq(0)
+      })
+
+      it('Should harvest those rewards again', async () => {
+        for (let i = 0; i < 3; i++) {
+          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
+          const staking = await StakingContract.connect(signerArray[i])
+          await staking.getReward()
+          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
+        }
+        await sendr('evm_revert', [snapshotIdArray[0]])
       })
     })
   })

@@ -140,12 +140,10 @@ contract RelayerRegistry is Initializable {
    * @dev designed this way as to allow someone to unregister themselves in case a relayer misbehaves
    *      - this should be followed by an action like burning relayer stake
    *      - there was an option of allowing the sender to burn relayer stake in case of malicious behaviour, this feature was not included in the end
-   * @param subaddress Address to unregister
    * */
-  function unregisterSubaddress(address subaddress) external {
-    require(msg.sender == subaddress, "can only unregister self");
-    getMasterForSubaddress[subaddress] = address(0);
-    emit SubaddressUnregistered(subaddress);
+  function unregisterSubaddress() external {
+    getMasterForSubaddress[msg.sender] = address(0);
+    emit SubaddressUnregistered(msg.sender);
   }
 
   /**

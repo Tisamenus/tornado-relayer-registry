@@ -7,6 +7,7 @@ require('hardhat-spdx-license-identifier')
 require('hardhat-storage-layout')
 require('hardhat-log-remover')
 require('hardhat-contract-sizer')
+require('solidity-coverage')
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
