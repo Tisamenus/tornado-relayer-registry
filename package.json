@@ -34,7 +34,7 @@
     "@uniswap/v3-periphery": "https://github.com/h-ivor/uniswap-v3-periphery",
     "tornado-anonymity-mining": "^2.1.5",
     "tornado-cli": "^0.0.1",
-    "tornado-governance": "^1.0.1",
+    "tornado-governance": "^1.0.3",
     "tornado-lottery-period": "https://github.com/h-ivor/tornado-lottery-period.git",
     "tornado-trees": "^0.0.11"
   },
