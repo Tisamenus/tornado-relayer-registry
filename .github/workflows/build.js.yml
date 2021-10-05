@@ -18,6 +18,15 @@ jobs:
       - run: yarn install
       - run: git submodule init
       - run: git submodule update
+      - run: yarn prettier:fix
+      - run: yarn lint
+      - uses: actions/checkout@master
+      - uses: codecov/codecov-action@v2
+        with:
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
       - run: yarn test
         env:
           etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
@@ -25,4 +34,3 @@ jobs:
           mainnet_rpc_key: ${{ secrets.MAINNET_RPC_KEY }}
           goerli_account_pk: ${{ secrets.GOERLI_ACCOUNT_PK }}
           mainnet_account_pk: ${{ secrets.MAINNET_ACCOUNT_PK }}
-      - run: yarn lint
