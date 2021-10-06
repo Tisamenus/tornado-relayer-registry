@@ -53,6 +53,7 @@ contract RelayerRegistryData {
   function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256) {
     getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
     getPoolIdForAddress[poolAddress] = getPoolDataForPoolId.length - 1;
+    getFeeForPoolId.push(0);
     return getPoolDataForPoolId.length - 1;
   }
 

@@ -131,6 +131,7 @@ contract RelayerRegistry is Initializable {
    * */
   function registerSubaddress(address relayer, address subaddress) external {
     require(getMasterForSubaddress[msg.sender] == relayer, "only relayer");
+    require(getMasterForSubaddress[subaddress] == address(0), "can't steal an address");
     getMasterForSubaddress[subaddress] = relayer;
     emit SubaddressRegistered(subaddress);
   }
