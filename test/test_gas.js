@@ -373,7 +373,6 @@ describe('Data and Manager tests', () => {
       })
 
       it('Should succesfully register all relayers', async function () {
-        const fee = ethers.utils.parseEther('0.1')
         let averageGasValue = BigNumber.from(0)
 
         for (let i = 0; i < 4; i++) {
@@ -383,7 +382,7 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-          const response = await registry.register(relayers[i].node, fee, ethers.utils.parseEther('101'), [])
+          const response = await registry.register(relayers[i].node, ethers.utils.parseEther('101'), [])
 
           const receipt = await response.wait()
 
@@ -391,7 +390,6 @@ describe('Data and Manager tests', () => {
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
-          expect(await RelayerRegistry.getRelayerFee(relayers[i].address)).to.equal(fee)
         }
 
         averageGasValue = averageGasValue.div(4)
