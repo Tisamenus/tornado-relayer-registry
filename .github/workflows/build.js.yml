@@ -27,6 +27,7 @@ jobs:
       - run: yarn prettier:fix
       - run: yarn lint
       - run: yarn coverage
-      - run: curl -Os https://uploader.codecov.io/latest/linux/codecov
-      - run: chmod +x codecov
-      - run: ./codecov -f "coverage.json"
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
