@@ -232,7 +232,7 @@ contract RelayerRegistry is Initializable {
    * @return relayer's ensHash
    * */
   function getRelayerEnsHash(address relayer) external view returns (bytes32) {
-    return getMetadataForRelayer[relayer].ensHash;
+    return getMetadataForRelayer[getMasterForSubaddress[relayer]].ensHash;
   }
 
   /**
@@ -241,7 +241,7 @@ contract RelayerRegistry is Initializable {
    * @return relayer's balance
    * */
   function getRelayerBalance(address relayer) external view returns (uint256) {
-    return getMetadataForRelayer[relayer].balance;
+    return getMetadataForRelayer[getMasterForSubaddress[relayer]].balance;
   }
 
   /**
@@ -252,8 +252,9 @@ contract RelayerRegistry is Initializable {
    * @param relayer relayer who's balance is to nullify
    * */
   function _nullifyBalance(address relayer) private {
-    Staking.addBurnRewards(getMetadataForRelayer[relayer].balance);
-    getMetadataForRelayer[relayer].balance = 0;
+    address masterAddress = getMasterForSubaddress[relayer];
+    Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
+    getMetadataForRelayer[masterAddress].balance = 0;
     emit RelayerBalanceNullified(relayer);
   }
 

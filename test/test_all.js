@@ -353,6 +353,28 @@ describe('Data and Manager tests', () => {
           expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
         }
       })
+
+      it('Updat fees of all pools and partial should work too', async () => {
+        let poolIdsAll = []
+        let poolIdsSome = []
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          poolIdsAll.push(i)
+          if (i % 2) poolIdsSome.push(i)
+        }
+
+        await RegistryData.updateFeesOfPools(poolIdsAll)
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        }
+
+        await RegistryData.updateFeesOfPools(poolIdsSome)
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        }
+      })
     })
 
     describe('Test registry registration', () => {
@@ -369,7 +391,11 @@ describe('Data and Manager tests', () => {
             ensName: name,
             address: address,
             wallet: await ethers.getSigner(address),
+            subaddresses: [],
           }
+
+          if (i == 2) relayers[i].subaddresses = [signerArray[4].address, signerArray[5].address]
+          if (i == 0) relayers[i].subaddresses = [signerArray[8].address, signerArray[9].address]
 
           await expect(() =>
             signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address }),
@@ -394,7 +420,7 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), [])
+          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), relayers[i].subaddresses)
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
@@ -414,12 +440,18 @@ describe('Data and Manager tests', () => {
         const registry = await RelayerRegistry.connect(relayerWallet)
         await registry.registerSubaddress(relayers[0].address, signerArray[6].address)
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.true
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[9].address)).to.be.true
       })
 
       it('Unregister should work', async () => {
-        const registry = await RelayerRegistry.connect(signerArray[6])
+        let registry = await RelayerRegistry.connect(signerArray[6])
         await registry.unregisterSubaddress()
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.false
+
+        registry = await RelayerRegistry.connect(signerArray[8])
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.true
+        await registry.unregisterSubaddress()
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.false
       })
     })
 
@@ -651,7 +683,7 @@ describe('Data and Manager tests', () => {
           events: pevents,
         })
 
-        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+        const proxyWithRelayer = await proxy.connect(signerArray[9])
 
         await expect(() => proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.changeTokenBalance(
           daiToken,
@@ -659,7 +691,7 @@ describe('Data and Manager tests', () => {
           await instance.denomination(),
         )
 
-        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
+        expect(await RelayerRegistry.getRelayerBalance(signerArray[9].address)).to.be.lt(initialBalance)
         expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
       })
 
