@@ -16,7 +16,7 @@ jobs:
       goerli_account_pk: ${{ secrets.GOERLI_ACCOUNT_PK }}
       mainnet_account_pk: ${{ secrets.MAINNET_ACCOUNT_PK }}
     steps:
-      - name: Checkout
+      - name: Tests and setup 
         uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
@@ -26,7 +26,10 @@ jobs:
       - run: git submodule update
       - run: yarn prettier:fix
       - run: yarn lint
+
+      - name: Generate coverage
       - run: yarn coverage
+
       - name: Coveralls
         uses: coverallsapp/github-action@master
         with:
