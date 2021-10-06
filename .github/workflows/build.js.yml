@@ -26,11 +26,8 @@ jobs:
       - run: git submodule update
       - run: yarn prettier:fix
       - run: yarn lint
-      - run: yarn test
-
-      - name: Upload coverage to Codecov
-        uses: actions/checkout@master
-      - uses: codecov/codecov-action@v2
-        with:
-          name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
+      - run: yarn coverage
+      - name: Codecov Coverage
+      - run: curl -Os https://uploader.codecov.io/latest/linux/codecov
+      - run: chmod +x codecov
+      - run: ./codecov -f "coverage.json"
