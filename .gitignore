@@ -6,5 +6,4 @@ dist
 .env
 coverage
 coverage.json
-codecov
 .openzeppelin

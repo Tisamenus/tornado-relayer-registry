@@ -20,6 +20,7 @@ struct PoolData {
 struct GlobalPoolData {
   uint128 protocolFee;
   uint128 globalPeriod;
+  bool[] etherIndices;
 }
 
 contract RegistryDataManager {
@@ -29,7 +30,7 @@ contract RegistryDataManager {
   uint24 public constant uniPoolFeeTorn = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
-  function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData calldata globalPoolData)
+  function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData memory globalPoolData)
     public
     view
     returns (uint256[] memory newPoolIdToFee)
@@ -45,7 +46,7 @@ contract RegistryDataManager {
     GlobalPoolData memory globalPoolData,
     uint256 isEtherIndex
   ) public view returns (uint256 newFee) {
-    if (isEtherIndex > 3) {
+    if (!globalPoolData.etherIndices[isEtherIndex]) {
       address token = ERC20Tornado(poolData.addressData).token();
       newFee = IERC20(token).balanceOf(poolData.addressData).mul(1e18).div(
         UniswapV3OracleHelper.getPriceRatioOfTokens(

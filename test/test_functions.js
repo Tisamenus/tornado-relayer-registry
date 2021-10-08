@@ -393,6 +393,28 @@ describe('Data and Manager tests', () => {
 
         await datagov.updateAllFees()
       })
+
+      it('Should be able to add an ether pool and update its fees and print', async () => {
+        const datagov = await RegistryData.connect(impGov)
+        await datagov.addEtherPool(0, tornadoPools[0])
+        await datagov.updateFeeOfPool(tornadoPools.length + 1)
+
+        console.log(
+          `${poolTokens[0]}-${denominations[0]}-pool fee:`,
+          (await RegistryData.getFeeForPoolId(tornadoPools.length + 1))
+            .div(ethers.utils.parseUnits('1', 'szabo'))
+            .toNumber() / 1000000,
+          'torn',
+        )
+
+        await datagov.updateAllFees()
+      })
+
+      it('Should fail if trying the same but making the ether pool an erc20', async () => {
+        const datagov = await RegistryData.connect(impGov)
+        await datagov.addPool(10000, tornadoPools[0])
+        await expect(datagov.updateFeeOfPool(tornadoPools.length + 2)).to.be.reverted
+      })
     })
 
     describe('Test registry registration', () => {

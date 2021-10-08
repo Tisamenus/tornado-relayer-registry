@@ -32,6 +32,13 @@ contract RelayerRegistryData {
       getPoolDataForPoolId.push(PoolData(initPoolDataFees[i], initPoolDataAddresses[i]));
       getPoolIdForAddress[initPoolDataAddresses[i]] = getPoolDataForPoolId.length - 1;
     }
+
+    bool[] storage indexes = dataForTWAPOracle.etherIndices;
+
+    for (uint256 i = 0; i < initPoolDataFees.length; i++) {
+      if (i < 4) indexes.push(true);
+      else indexes.push(false);
+    }
   }
 
   modifier onlyGovernance() {
@@ -50,11 +57,14 @@ contract RelayerRegistryData {
   so except contract initialization, we can let governance add any other pools
   should be updated together with relayer registry info
    */
-  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256) {
-    getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
-    getPoolIdForAddress[poolAddress] = getPoolDataForPoolId.length - 1;
-    getFeeForPoolId.push(0);
-    return getPoolDataForPoolId.length - 1;
+  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256 poolId) {
+    poolId = _addPool(uniPoolFee, poolAddress);
+    dataForTWAPOracle.etherIndices.push(false);
+  }
+
+  function addEtherPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256 poolId) {
+    poolId = _addPool(uniPoolFee, poolAddress);
+    dataForTWAPOracle.etherIndices.push(true);
   }
 
   function setProtocolFee(uint128 newFee) external onlyGovernance {
@@ -77,5 +87,12 @@ contract RelayerRegistryData {
       poolId
     );
     emit FeeUpdated(block.timestamp, poolId);
+  }
+
+  function _addPool(uint96 uniPoolFee, address poolAddress) internal returns (uint256) {
+    getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
+    getPoolIdForAddress[poolAddress] = getPoolDataForPoolId.length - 1;
+    getFeeForPoolId.push(0);
+    return getPoolDataForPoolId.length - 1;
   }
 }
