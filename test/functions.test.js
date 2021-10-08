@@ -1,4 +1,4 @@
-const { ethers, upgrades, network } = require('hardhat')
+const { ethers, upgrades } = require('hardhat')
 const { expect } = require('chai')
 const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
