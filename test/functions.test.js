@@ -1,4 +1,4 @@
-const { ethers, upgrades } = require('hardhat')
+const { ethers, upgrades, network } = require('hardhat')
 const { expect } = require('chai')
 const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
@@ -14,7 +14,7 @@ describe('Data and Manager tests', () => {
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
-  //  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
+  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -83,21 +83,17 @@ describe('Data and Manager tests', () => {
     return await token.transfer(recipientAddress, amount)
   }
 
-  // let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
-  //   const token = await getToken(tokenAddress)
-  //   return await token.balanceOf(addressToCheck)
-  // }
+  let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
+    const token = await getToken(tokenAddress)
+    return await token.balanceOf(addressToCheck)
+  }
 
   let minewait = async (time) => {
     await ethers.provider.send('evm_increaseTime', [time])
     await ethers.provider.send('evm_mine', [])
   }
 
-  let snapshotIdArray = []
-
   before(async function () {
-    snapshotIdArray[0] = await sendr('evm_snapshot', [])
-
     signerArray = await ethers.getSigners()
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
@@ -328,6 +324,92 @@ describe('Data and Manager tests', () => {
 
       it('Should pass initial fee update', async () => {
         await RegistryData.updateAllFees()
+        for (let i = 0; i < tornadoPools.length; i++) {
+          console.log(
+            `${poolTokens[i]}-${denominations[i]}-pool fee: `,
+            (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+              1000000,
+            'torn',
+          )
+        }
+      })
+
+      it('Should repeatedly update fees and assure none return 0', async () => {
+        for (let i = 0; i < tornadoPools.length; i++) {
+          await RegistryData.updateAllFees()
+          for (let j = 0; j < tornadoPools.length; j++) {
+            expect(await RegistryData.getFeeForPoolId(j)).to.be.gt(0)
+          }
+        }
+      })
+
+      it('Should test repeatedly updating fees of specific pool and assure none return 0', async () => {
+        for (let i = 0; i < tornadoPools.length; i++) {
+          await RegistryData.updateFeeOfPool(i)
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        }
+      })
+
+      it('Update fees of all pools and partial should work too', async () => {
+        let poolIdsAll = []
+        let poolIdsSome = []
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          poolIdsAll.push(i)
+          if (i % 2) poolIdsSome.push(i)
+        }
+
+        await RegistryData.updateFeesOfPools(poolIdsAll)
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        }
+
+        await RegistryData.updateFeesOfPools(poolIdsSome)
+
+        for (let i = 0; i < tornadoPools.length; i++) {
+          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        }
+      })
+
+      it('Should be able to add a pool and update its fees and print', async () => {
+        const datagov = await RegistryData.connect(impGov)
+        let index = tornadoPools.length - 1
+        await datagov.addPool(10000, tornadoPools[index])
+        index++
+        await datagov.updateFeeOfPool(index)
+        index--
+
+        console.log(
+          `${poolTokens[index]}-${denominations[index]}-pool fee:`,
+          (await RegistryData.getFeeForPoolId(index)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+            1000000,
+          'torn',
+        )
+
+        await datagov.updateAllFees()
+      })
+
+      it('Should be able to add an ether pool and update its fees and print', async () => {
+        const datagov = await RegistryData.connect(impGov)
+        await datagov.addEtherPool(0, tornadoPools[0])
+        await datagov.updateFeeOfPool(tornadoPools.length + 1)
+
+        console.log(
+          `${poolTokens[0]}-${denominations[0]}-pool fee:`,
+          (await RegistryData.getFeeForPoolId(tornadoPools.length + 1))
+            .div(ethers.utils.parseUnits('1', 'szabo'))
+            .toNumber() / 1000000,
+          'torn',
+        )
+
+        await datagov.updateAllFees()
+      })
+
+      it('Should fail if trying the same but making the ether pool an erc20', async () => {
+        const datagov = await RegistryData.connect(impGov)
+        await datagov.addPool(10000, tornadoPools[0])
+        await expect(datagov.updateFeeOfPool(tornadoPools.length + 2)).to.be.reverted
       })
     })
 
@@ -356,8 +438,8 @@ describe('Data and Manager tests', () => {
           ).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther('1'))
 
           await expect(() =>
-            erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('201')),
-          ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('201'))
+            erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('101')),
+          ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('101'))
         }
 
         console.log(
@@ -407,24 +489,8 @@ describe('Data and Manager tests', () => {
       })
     })
 
-    describe('Malicious registration', () => {
-      it('Shouldnt be able to register address of another relayer', async () => {
-        const registry = await RelayerRegistry.connect(relayers[0].wallet)
-
-        await expect(registry.registerSubaddress(relayers[0].address, signerArray[4].address)).to.be.reverted
-      })
-
-      it('Shouldnt be able to steal address if registering again', async () => {
-        const registry = await RelayerRegistry.connect(relayers[0].wallet)
-
-        await expect(
-          registry.register(relayers[0].node, ethers.utils.parseEther('100'), relayers[2].subaddresses),
-        ).to.be.reverted
-      })
-    })
-
-    describe('Malicious depo/withdraw', () => {
-      it('Relayer should not be able to withdraw and burn another relayer', async () => {
+    describe('Test deposit/withdrawals and reward updating', () => {
+      it('Should succesfully deposit and withdraw from / into an instance', async function () {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
@@ -461,13 +527,264 @@ describe('Data and Manager tests', () => {
           events: pevents,
         })
 
-        const proxyWithRelayer = await proxy.connect(relayers[1].wallet)
+        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
 
-        await expect(proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.be.reverted
+        await expect(() => proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          await instance.denomination(),
+        )
+
+        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
+      })
+
+      it('Should call a lockWithApproval(0) for a signer and have incremented some of his rewards', async () => {
+        const gov = await Governance.connect(signerArray[0])
+        await expect(gov.lockWithApproval(0)).to.not.be.reverted
+
+        const balance = await StakingContract.accumulatedRewards(signerArray[0].address)
+        expect(balance).to.be.gt(0)
+
+        console.log('Signer 0 accumulatedRewards: ', balance.toString())
+      })
+
+      it('This time around relayer should not have enough funds for withdrawal', async function () {
+        const daiToken = await (await getToken(dai)).connect(daiWhale)
+        const instanceAddress = tornadoPools[6]
+
+        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
+
+        const instance = await ethers.getContractAt(
+          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
+          instanceAddress,
+        )
+        const proxy = await TornadoProxy.connect(daiWhale)
+        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+
+        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
+
+        const depo = createDeposit({
+          nullifier: rbigint(31),
+          secret: rbigint(31),
+        })
+
+        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          BigNumber.from(0).sub(await instance.denomination()),
+        )
+
+        let pevents = await mixer.queryFilter('Deposit')
+        await initialize({ merkleTreeHeight: 20 })
+
+        const result1 = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+          relayerAddress: relayers[0].address,
+          events: pevents,
+        })
+
+        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
+
+        await expect(proxyWithRelayer.withdraw(instance.address, result1.proof, ...result1.args)).to.be
+          .reverted
 
         expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.equal(initialBalance)
-        expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(initialShareValue)
+
+        const result2 = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+          events: pevents,
+        })
+
+        await expect(() =>
+          proxy.withdraw(instance.address, result2.proof, ...result2.args),
+        ).to.changeTokenBalance(daiToken, daiWhale, await instance.denomination())
       })
     })
+
+    describe('Test claiming rewards multiple times and withdrawing from gov', () => {
+      it('Should NOT reward you if you lock, then try to harvest', async () => {
+        const k5 = ethers.utils.parseEther('5000')
+
+        await expect(() => erc20Transfer(torn, tornWhale, signerArray[3].address, k5)).to.changeTokenBalance(
+          await getToken(torn),
+          signerArray[3],
+          k5,
+        )
+
+        const gov = await Governance.connect(signerArray[3])
+        const Torn = (await getToken(torn)).connect(signerArray[3])
+        const staking = await StakingContract.connect(signerArray[3])
+
+        await Torn.approve(gov.address, k5)
+        await gov.lockWithApproval(k5)
+        await staking.getReward()
+
+        const balance = await gov.lockedBalance(signerArray[3].address)
+
+        expect(balance).to.equal(k5)
+      })
+
+      it('Should properly harvest rewards if someone calls getReward', async function () {
+        const Torn = await getToken(torn)
+
+        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
+
+        let staking = await StakingContract.connect(signerArray[0])
+        await staking.getReward()
+        staking = await StakingContract.connect(signerArray[2])
+        await staking.getReward()
+
+        expect(await Governance.lockedBalance(signerArray[0].address)).to.be.gt(initialBalance0)
+        expect(await Governance.lockedBalance(signerArray[2].address)).to.be.gt(initialBalance1)
+      })
+
+      it('Second harvest shouldnt work if no withdraw was made', async () => {
+        const Torn = await getToken(torn)
+
+        const initialBalance0 = await Torn.balanceOf(signerArray[0].address)
+        const initialBalance1 = await Torn.balanceOf(signerArray[2].address)
+
+        let staking = await StakingContract.connect(signerArray[0])
+        await staking.getReward()
+        staking = await StakingContract.connect(signerArray[2])
+        await staking.getReward()
+
+        expect(await Torn.balanceOf(signerArray[0].address)).to.be.equal(initialBalance0)
+        expect(await Torn.balanceOf(signerArray[2].address)).to.be.equal(initialBalance1)
+      })
+
+      it('It should NOT be possible to withdraw more than you have', async () => {
+        let gov = await Governance.connect(signerArray[0])
+        await expect(gov.unlock(ethers.utils.parseEther('5000000'))).to.be.reverted
+      })
+    })
+
+    describe('Test staking to relayer', () => {
+      it('Should be able to withdraw some torn from governance and stake to a relayer', async () => {
+        const gov = await Governance.connect(signerArray[0])
+        const k1 = ethers.utils.parseEther('100')
+        const Torn = (await getToken(torn)).connect(signerArray[0])
+
+        await expect(() => gov.unlock(k1)).to.changeTokenBalance(await getToken(torn), signerArray[0], k1)
+
+        const registry = await RelayerRegistry.connect(signerArray[0])
+
+        await Torn.approve(RelayerRegistry.address, k1)
+
+        await registry.stakeToRelayer(relayers[0].address, k1)
+
+        expect(await registry.getRelayerBalance(relayers[0].address)).to.be.gt(k1)
+      })
+
+      it('Should succesfully deposit and withdraw from / into the instance we staked to', async function () {
+        const daiToken = await (await getToken(dai)).connect(daiWhale)
+        const instanceAddress = tornadoPools[6]
+
+        const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
+        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
+
+        const instance = await ethers.getContractAt(
+          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
+          instanceAddress,
+        )
+        const proxy = await TornadoProxy.connect(daiWhale)
+        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
+
+        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
+
+        const depo = createDeposit({
+          nullifier: rbigint(31),
+          secret: rbigint(31),
+        })
+
+        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          BigNumber.from(0).sub(await instance.denomination()),
+        )
+
+        let pevents = await mixer.queryFilter('Deposit')
+        await initialize({ merkleTreeHeight: 20 })
+
+        const { proof, args } = await generateProof({
+          deposit: depo,
+          recipient: daiWhale.address,
+          relayerAddress: relayers[0].address,
+          events: pevents,
+        })
+
+        const proxyWithRelayer = await proxy.connect(signerArray[9])
+
+        await expect(() => proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.changeTokenBalance(
+          daiToken,
+          daiWhale,
+          await instance.denomination(),
+        )
+
+        expect(await RelayerRegistry.getRelayerBalance(signerArray[9].address)).to.be.lt(initialBalance)
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
+      })
+
+      it('Signer at index 1 should have largest accumulatedRewards and 2 > 0', async () => {
+        for (let i = 0; i < 3; i++) {
+          const gov = await Governance.connect(signerArray[i])
+          await gov.unlock(0)
+        }
+        const balanceS1 = await StakingContract.accumulatedRewards(signerArray[1].address)
+        const balanceS2 = await StakingContract.accumulatedRewards(signerArray[2].address)
+        const balanceS0 = await StakingContract.accumulatedRewards(signerArray[0].address)
+
+        expect(balanceS2).to.be.gt(balanceS0)
+        expect(balanceS1).to.be.gt(balanceS2)
+
+        console.log('Signer 0 accumulatedRewards: ', balanceS0.toString())
+        console.log('Signer 1 accumulatedRewards: ', balanceS1.toString())
+        console.log('Signer 2 accumulatedRewards: ', balanceS2.toString())
+      })
+
+      it('Should harvest those rewards again', async () => {
+        for (let i = 0; i < 3; i++) {
+          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
+          const staking = await StakingContract.connect(signerArray[i])
+          await staking.getReward()
+          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
+        }
+      })
+    })
+
+    describe('Test governance interaction', () => {
+      it('Should nullify relayers balance', async () => {
+        const forwarder = await ForwarderContract.connect(impGov)
+        await forwarder.forwardNullifyBalance(relayers[3].address)
+
+        const balance = await RelayerRegistry.getRelayerBalance(relayers[3].address)
+
+        expect(balance).to.eq(0)
+      })
+
+      it('Should harvest those rewards again', async () => {
+        for (let i = 0; i < 3; i++) {
+          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
+          const staking = await StakingContract.connect(signerArray[i])
+          await staking.getReward()
+          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
+        }
+      })
+    })
+  })
+
+  after(async function () {
+    await ethers.provider.send('hardhat_reset', [
+      {
+        forking: {
+          jsonRpcUrl: `https://mainnet.infura.io/v3/${process.env.mainnet_rpc_key}`,
+          blockNumber: process.env.use_latest_block == 'true' ? undefined : 13327013,
+        },
+      },
+    ])
   })
 })

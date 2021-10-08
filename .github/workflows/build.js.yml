@@ -24,11 +24,15 @@ jobs:
       - run: yarn install
       - run: git submodule init
       - run: git submodule update
-      - run: yarn prettier:fix
       - run: yarn lint
+      - run: yarn test:all
+        env:
+          use_latest_block: true
 
       - name: Generate coverage
         run: yarn coverage
+        env:
+          use_latest_block: false
 
       - name: Coveralls
         uses: coverallsapp/github-action@master

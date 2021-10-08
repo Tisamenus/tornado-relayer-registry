@@ -14,8 +14,7 @@ describe('Data and Manager tests', () => {
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
-  // eslint-disable-next-line
-  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
+  //  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -65,6 +64,7 @@ describe('Data and Manager tests', () => {
   let tornWhale
   let daiWhale
   let relayers = []
+  let impGov
 
   //// NORMAL ACCOUNTS
   let signerArray
@@ -83,21 +83,17 @@ describe('Data and Manager tests', () => {
     return await token.transfer(recipientAddress, amount)
   }
 
-  // eslint-disable-next-line
-  let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
-    const token = await getToken(tokenAddress)
-    return await token.balanceOf(addressToCheck)
-  }
+  // let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
+  //   const token = await getToken(tokenAddress)
+  //   return await token.balanceOf(addressToCheck)
+  // }
 
   let minewait = async (time) => {
     await ethers.provider.send('evm_increaseTime', [time])
     await ethers.provider.send('evm_mine', [])
   }
 
-  let snapshotIdArray = []
-
   before(async function () {
-    snapshotIdArray[0] = await sendr('evm_snapshot', [])
     signerArray = await ethers.getSigners()
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
@@ -216,7 +212,7 @@ describe('Data and Manager tests', () => {
       it('Should successfully imitate governance to transfer torn to vault,\n since we do this in the former proposal', async () => {
         await sendr('hardhat_impersonateAccount', [Governance.address])
         await sendr('hardhat_setBalance', [Governance.address, '0xDE0B6B3A7640000'])
-        const impGov = await ethers.getSigner(Governance.address)
+        impGov = await ethers.getSigner(Governance.address)
         const govTorn = (await await getToken(torn)).connect(impGov)
 
         await expect(() => govTorn.transfer(MockVault.address, approxVaultBalance)).to.changeTokenBalance(
@@ -229,8 +225,8 @@ describe('Data and Manager tests', () => {
       it('Should successfully distribute torn to default accounts', async function () {
         for (let i = 0; i < 3; i++) {
           await expect(() =>
-            erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5100')),
-          ).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5100'))
+            erc20Transfer(torn, tornWhale, signerArray[i].address, ethers.utils.parseEther('5000')),
+          ).to.changeTokenBalance(await getToken(torn), signerArray[i], ethers.utils.parseEther('5000'))
         }
       })
 
@@ -323,29 +319,11 @@ describe('Data and Manager tests', () => {
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
 
         expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
+        expect(await TornadoProxy.Registry()).to.equal(RelayerRegistry.address)
       })
 
       it('Should pass initial fee update', async () => {
         await RegistryData.updateAllFees()
-      })
-
-      it('Should repeatedly update fees and assure none return 0', async () => {
-        let gasUsedForUpdateFees = BigNumber.from(0)
-
-        for (let i = 0; i < tornadoPools.length; i++) {
-          const response = await RegistryData.updateAllFees()
-          const receipt = await response.wait()
-
-          gasUsedForUpdateFees = gasUsedForUpdateFees.add(receipt.gasUsed)
-
-          for (let j = 0; j < tornadoPools.length; j++) {
-            expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
-          }
-        }
-
-        gasUsedForUpdateFees = gasUsedForUpdateFees.div(tornadoPools.length)
-
-        console.log('Gas used on average to update fees: ', gasUsedForUpdateFees.toString())
       })
     })
 
@@ -363,21 +341,28 @@ describe('Data and Manager tests', () => {
             ensName: name,
             address: address,
             wallet: await ethers.getSigner(address),
+            subaddresses: [],
           }
+
+          if (i == 2) relayers[i].subaddresses = [signerArray[4].address, signerArray[5].address]
+          if (i == 0) relayers[i].subaddresses = [signerArray[8].address, signerArray[9].address]
 
           await expect(() =>
             signerArray[0].sendTransaction({ value: ethers.utils.parseEther('1'), to: relayers[i].address }),
           ).to.changeEtherBalance(relayers[i].wallet, ethers.utils.parseEther('1'))
 
           await expect(() =>
-            erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('101')),
-          ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('101'))
+            erc20Transfer(torn, tornWhale, relayers[i].address, ethers.utils.parseEther('201')),
+          ).to.changeTokenBalance(await getToken(torn), relayers[i].wallet, ethers.utils.parseEther('201'))
         }
+
+        console.log(
+          'Balance of whale after relayer funding: ',
+          (await (await getToken(torn)).balanceOf(tornWhale.address)).toString(),
+        )
       })
 
       it('Should succesfully register all relayers', async function () {
-        let averageGasValue = BigNumber.from(0)
-
         for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
             .connect(relayers[i].wallet)
@@ -385,26 +370,57 @@ describe('Data and Manager tests', () => {
 
           const registry = await RelayerRegistry.connect(relayers[i].wallet)
 
-          const response = await registry.register(relayers[i].node, ethers.utils.parseEther('101'), [])
-
-          const receipt = await response.wait()
-
-          averageGasValue = averageGasValue.add(receipt.gasUsed)
+          await registry.register(relayers[i].node, ethers.utils.parseEther('101'), relayers[i].subaddresses)
 
           expect(await RelayerRegistry.isRelayerRegistered(relayers[i].address, relayers[i].address)).to.be
             .true
+          expect(await RelayerRegistry.isRelayer(relayers[i].address)).to.be.true
+          expect(await RelayerRegistry.getRelayerEnsHash(relayers[i].address)).to.equal(relayers[i].node)
         }
+      })
 
-        averageGasValue = averageGasValue.div(4)
+      it('Register subaddress should work', async () => {
+        await signerArray[6].sendTransaction({
+          to: relayers[0].address,
+          value: ethers.utils.parseEther('1'),
+        })
 
-        console.log('Average gas used for registration: ', averageGasValue.toString())
+        const registry = await RelayerRegistry.connect(relayers[0].wallet)
+        await registry.registerSubaddress(relayers[0].address, signerArray[6].address)
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.true
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[9].address)).to.be.true
+      })
+
+      it('Unregister should work', async () => {
+        let registry = await RelayerRegistry.connect(signerArray[6])
+        await registry.unregisterSubaddress()
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.false
+
+        registry = await RelayerRegistry.connect(signerArray[8])
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.true
+        await registry.unregisterSubaddress()
+        expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.false
       })
     })
 
-    describe('Test deposit/withdrawals and reward updating', () => {
-      let totalGasUsedForWithdrawal = BigNumber.from(0)
+    describe('Malicious registration', () => {
+      it('Shouldnt be able to register address of another relayer', async () => {
+        const registry = await RelayerRegistry.connect(relayers[0].wallet)
 
-      it('Should succesfully deposit and withdraw from / into an instance', async function () {
+        await expect(registry.registerSubaddress(relayers[0].address, signerArray[4].address)).to.be.reverted
+      })
+
+      it('Shouldnt be able to steal address if registering again', async () => {
+        const registry = await RelayerRegistry.connect(relayers[0].wallet)
+
+        await expect(
+          registry.register(relayers[0].node, ethers.utils.parseEther('100'), relayers[2].subaddresses),
+        ).to.be.reverted
+      })
+    })
+
+    describe('Malicious depo/withdraw', () => {
+      it('Relayer should not be able to withdraw and burn another relayer', async () => {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
 
@@ -441,115 +457,24 @@ describe('Data and Manager tests', () => {
           events: pevents,
         })
 
-        const proxyWithRelayer = await proxy.connect(relayers[0].wallet)
-
-        const response = await proxyWithRelayer.withdraw(instance.address, proof, ...args)
-        const receipt = await response.wait()
-
-        totalGasUsedForWithdrawal = receipt.gasUsed
-
-        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.be.lt(initialBalance)
-        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
-      })
-
-      it('Should calculate average gas usage for all lockWithApprovals(0)', async () => {
-        let averageGasValue = BigNumber.from(0)
-
-        for (let i = 0; i < 3; i++) {
-          const gov = await Governance.connect(signerArray[0])
-          const response = await expect(gov.lockWithApproval(100)).to.not.be.reverted
-          const receipt = await response.wait()
-
-          averageGasValue = averageGasValue.add(receipt.gasUsed)
-        }
-
-        averageGasValue = averageGasValue.div(3)
-
-        console.log('Average gas used for locking: ', averageGasValue.toString())
-      })
-
-      it('Should succesfully deposit and withdraw from / into an instance', async function () {
-        const daiToken = await (await getToken(dai)).connect(daiWhale)
-        const instanceAddress = tornadoPools[6]
-
-        const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
-        const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[1].address)
-
-        const instance = await ethers.getContractAt(
-          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
-          instanceAddress,
-        )
-        const proxy = await TornadoProxy.connect(daiWhale)
-        const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
-
-        await daiToken.approve(TornadoProxy.address, ethers.utils.parseEther('1000000'))
-
-        const depo = createDeposit({
-          nullifier: rbigint(31),
-          secret: rbigint(31),
-        })
-
-        await expect(() => proxy.deposit(instanceAddress, toHex(depo.commitment), [])).to.changeTokenBalance(
-          daiToken,
-          daiWhale,
-          BigNumber.from(0).sub(await instance.denomination()),
-        )
-
-        let pevents = await mixer.queryFilter('Deposit')
-        await initialize({ merkleTreeHeight: 20 })
-
-        const { proof, args } = await generateProof({
-          deposit: depo,
-          recipient: daiWhale.address,
-          relayerAddress: relayers[1].address,
-          events: pevents,
-        })
-
         const proxyWithRelayer = await proxy.connect(relayers[1].wallet)
 
-        const response = await proxyWithRelayer.withdraw(instance.address, proof, ...args)
-        const receipt = await response.wait()
+        await expect(proxyWithRelayer.withdraw(instance.address, proof, ...args)).to.be.reverted
 
-        totalGasUsedForWithdrawal = totalGasUsedForWithdrawal.add(receipt.gasUsed)
-        totalGasUsedForWithdrawal = totalGasUsedForWithdrawal.div(2)
-
-        expect(await RelayerRegistry.getRelayerBalance(relayers[1].address)).to.be.lt(initialBalance)
-        expect(await StakingContract.accumulatedRewardPerTorn()).to.be.gt(initialShareValue)
-
-        console.log('Average gas used for withdrawal: ', totalGasUsedForWithdrawal.toString())
-      })
-
-      it('Should calculate average gas usage for all unlock(0)', async () => {
-        let averageGasValue = BigNumber.from(0)
-
-        for (let i = 0; i < 3; i++) {
-          const gov = await Governance.connect(signerArray[0])
-          const response = await expect(gov.unlock(100)).to.not.be.reverted
-          const receipt = await response.wait()
-
-          averageGasValue = averageGasValue.add(receipt.gasUsed)
-        }
-
-        averageGasValue = averageGasValue.div(3)
-
-        console.log('Average gas used for unlocking: ', averageGasValue.toString())
-      })
-
-      it('Should calculate average gas usage for getReward()', async () => {
-        let gasUsedForClaimReward = BigNumber.from(0)
-
-        for (let i = 0; i < 3; i++) {
-          const staking = await StakingContract.connect(signerArray[i])
-          const response = await staking.getReward()
-          const receipt = await response.wait()
-          gasUsedForClaimReward = gasUsedForClaimReward.add(receipt.gasUsed)
-        }
-
-        gasUsedForClaimReward = gasUsedForClaimReward.div(3)
-
-        console.log('Average gas used for getReward(): ', gasUsedForClaimReward.toString())
-        await sendr('evm_revert', [snapshotIdArray[0]])
+        expect(await RelayerRegistry.getRelayerBalance(relayers[0].address)).to.equal(initialBalance)
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(initialShareValue)
       })
     })
+  })
+
+  after(async function () {
+    await ethers.provider.send('hardhat_reset', [
+      {
+        forking: {
+          jsonRpcUrl: `https://mainnet.infura.io/v3/${process.env.mainnet_rpc_key}`,
+          blockNumber: process.env.use_latest_block == 'true' ? undefined : 13327013,
+        },
+      },
+    ])
   })
 })

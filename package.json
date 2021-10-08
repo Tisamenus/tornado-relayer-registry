@@ -10,13 +10,13 @@
     "prettier:fix": "prettier --write . --config .prettierrc",
     "lint": "yarn eslint && yarn prettier:check",
     "test:all": "yarn hardhat test",
-    "test": "yarn test:all test/test_functions",
-    "test:gas": "yarn test:all test/test_gas",
+    "test": "yarn test:all test/functions.test.js",
+    "test:gas": "yarn test:all test/gas.test.js",
     "f:test": "yarn prettier:fix && yarn test && yarn lint",
     "f:test:gas": "yarn prettier:fix && yarn test:gas && yarn lint",
     "compile": "yarn prettier:fix && yarn hardhat compile",
     "clean": "yarn prettier:fix && yarn lint",
-    "coverage": "yarn hardhat coverage --testfiles \"test/*.js\""
+    "coverage": "yarn hardhat coverage --testfiles \"test/*.test.js\""
   },
   "repository": {
     "type": "git",
