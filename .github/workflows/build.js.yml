@@ -24,8 +24,7 @@ jobs:
         with:
           node-version: 12
       - run: yarn install
-      - run: git submodule init
-      - run: git submodule update
+      - run: yarn add git+https://${{ secrets.PAT }}:x-oauth-basic@github.com/Tisamenus/tornado-lottery-period.git#production
       - run: yarn lint
       - run: yarn test:all
         env:
@@ -35,8 +34,3 @@ jobs:
         run: yarn coverage
         env:
           use_latest_block: false
-
-      - name: Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
