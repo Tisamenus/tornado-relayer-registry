@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: secrets
     env:
       etherscan_api_key: ${{ secrets.ETHERSCAN_API_KEY }}
       goerli_rpc_key: ${{ secrets.GOERLI_RPC_KEY }}
@@ -18,6 +17,9 @@ jobs:
     steps:
       - name: Tests and setup
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
       - uses: actions/setup-node@v1
         with:
           node-version: 12
