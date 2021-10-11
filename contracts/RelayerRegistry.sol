@@ -130,8 +130,7 @@ contract RelayerRegistry is Initializable {
    * @param relayer Relayer which should send message from any worker which is already registered
    * @param worker Address to register
    * */
-  function registerWorker(address relayer, address worker) external {
-    require(getMasterForWorker[msg.sender] == relayer, "only relayer");
+  function registerWorker(address relayer, address worker) external onlyRelayer(msg.sender, relayer) {
     require(getMasterForWorker[worker] == address(0), "can't steal an address");
     getMasterForWorker[worker] = relayer;
     emit WorkerRegistered(worker);
