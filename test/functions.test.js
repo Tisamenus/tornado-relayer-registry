@@ -472,19 +472,19 @@ describe('Data and Manager tests', () => {
         })
 
         const registry = await RelayerRegistry.connect(relayers[0].wallet)
-        await registry.registerSubaddress(relayers[0].address, signerArray[6].address)
+        await registry.registerWorker(relayers[0].address, signerArray[6].address)
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.true
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[9].address)).to.be.true
       })
 
       it('Unregister should work', async () => {
         let registry = await RelayerRegistry.connect(signerArray[6])
-        await registry.unregisterSubaddress()
+        await registry.unregisterWorker(signerArray[6].address)
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.false
 
         registry = await RelayerRegistry.connect(signerArray[8])
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.true
-        await registry.unregisterSubaddress()
+        await registry.unregisterWorker(signerArray[8].address)
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.false
       })
     })

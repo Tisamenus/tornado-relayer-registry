@@ -45,11 +45,11 @@ contract RelayerRegistry is Initializable {
   address public tornadoProxy;
 
   mapping(address => RelayerMetadata) public getMetadataForRelayer;
-  mapping(address => address) public getMasterForSubaddress;
+  mapping(address => address) public getMasterForWorker;
 
   event RelayerBalanceNullified(address indexed relayer);
-  event SubaddressRegistered(address indexed subaddress);
-  event SubaddressUnregistered(address indexed subaddress);
+  event WorkerRegistered(address indexed worker);
+  event WorkerUnregistered(address indexed worker);
   event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
   event StakeBurned(address indexed relayer, uint256 indexed amountBurned);
   event NewMinimumStakeAmount(uint256 indexed minStakeAmount);
@@ -72,7 +72,7 @@ contract RelayerRegistry is Initializable {
   }
 
   modifier onlyRelayer(address sender, address relayer) {
-    require(getMasterForSubaddress[sender] == relayer, "only relayer");
+    require(getMasterForWorker[sender] == relayer, "only relayer");
     _;
   }
 
@@ -94,46 +94,47 @@ contract RelayerRegistry is Initializable {
   }
 
   /**
-   * @notice This function should register a master address and optionally a set of subaddresses for a relayer + metadata
-   * @dev Relayer can't steal other relayers subaddresses since they are registered, and a wallet (msg.sender check) can always unregister itself
+   * @notice This function should register a master address and optionally a set of workeres for a relayer + metadata
+   * @dev Relayer can't steal other relayers workeres since they are registered, and a wallet (msg.sender check) can always unregister itself
    * @param ensHash ensHash of the relayer
    * @param stake the initial amount of stake in TORN the relayer is depositing
    * */
   function register(
     bytes32 ensHash,
     uint256 stake,
-    address[] memory subaddressesToRegister
+    address[] memory workersToRegister
   ) external onlyENSOwner(ensHash) {
+    require(getMasterForWorker[msg.sender] == address(0), "cant register again");
     RelayerMetadata storage metadata = getMetadataForRelayer[msg.sender];
 
     require(metadata.ensHash == bytes32(0), "registered already");
-    require(stake.add(metadata.balance) >= minStakeAmount, "!min_stake");
+    require(stake >= minStakeAmount, "!min_stake");
 
     _sendStakeToStaking(msg.sender, stake);
     emit StakeAddedToRelayer(msg.sender, stake);
 
     metadata.balance = stake;
     metadata.ensHash = ensHash;
-    getMasterForSubaddress[msg.sender] = msg.sender;
+    getMasterForWorker[msg.sender] = msg.sender;
 
-    for (uint256 i = 0; i < subaddressesToRegister.length; i++) {
-      require(getMasterForSubaddress[subaddressesToRegister[i]] == address(0), "can't steal an address");
-      getMasterForSubaddress[subaddressesToRegister[i]] = msg.sender;
+    for (uint256 i = 0; i < workersToRegister.length; i++) {
+      require(getMasterForWorker[workersToRegister[i]] == address(0), "can't steal an address");
+      getMasterForWorker[workersToRegister[i]] = msg.sender;
     }
 
     emit NewRelayerRegistered(ensHash, msg.sender, stake);
   }
 
   /**
-   * @notice This function should allow relayers to register more subaddresses
-   * @param relayer Relayer which should send message from any subaddress which is already registered
-   * @param subaddress Address to register
+   * @notice This function should allow relayers to register more workeres
+   * @param relayer Relayer which should send message from any worker which is already registered
+   * @param worker Address to register
    * */
-  function registerSubaddress(address relayer, address subaddress) external {
-    require(getMasterForSubaddress[msg.sender] == relayer, "only relayer");
-    require(getMasterForSubaddress[subaddress] == address(0), "can't steal an address");
-    getMasterForSubaddress[subaddress] = relayer;
-    emit SubaddressRegistered(subaddress);
+  function registerWorker(address relayer, address worker) external {
+    require(getMasterForWorker[msg.sender] == relayer, "only relayer");
+    require(getMasterForWorker[worker] == address(0), "can't steal an address");
+    getMasterForWorker[worker] = relayer;
+    emit WorkerRegistered(worker);
   }
 
   /**
@@ -142,9 +143,10 @@ contract RelayerRegistry is Initializable {
    *      - this should be followed by an action like burning relayer stake
    *      - there was an option of allowing the sender to burn relayer stake in case of malicious behaviour, this feature was not included in the end
    * */
-  function unregisterSubaddress() external {
-    getMasterForSubaddress[msg.sender] = address(0);
-    emit SubaddressUnregistered(msg.sender);
+  function unregisterWorker(address worker) external {
+    if (worker != msg.sender) require(getMasterForWorker[worker] == msg.sender, "only owner of worker");
+    getMasterForWorker[msg.sender] = address(0);
+    emit WorkerUnregistered(msg.sender);
   }
 
   /**
@@ -153,7 +155,7 @@ contract RelayerRegistry is Initializable {
    * @param stake Stake to be added to relayer
    * */
   function stakeToRelayer(address relayer, uint256 stake) external {
-    require(getMasterForSubaddress[relayer] == relayer, "!registered");
+    require(getMasterForWorker[relayer] == relayer, "!registered");
     _sendStakeToStaking(msg.sender, stake);
     getMetadataForRelayer[relayer].balance = uint256(stake.add(getMetadataForRelayer[relayer].balance));
     emit StakeAddedToRelayer(relayer, stake);
@@ -163,10 +165,10 @@ contract RelayerRegistry is Initializable {
    * @notice This function should burn some relayer stake on withdraw and notify staking of this
    * @dev IMPORTANT FUNCTION:
    *      - This should be only called by the tornado proxy
-   *      - Should revert if relayer does not call proxy from valid subaddress
+   *      - Should revert if relayer does not call proxy from valid worker
    *      - Should not overflow
    *      - Should underflow and revert (SafeMath) on not enough stake (balance)
-   * @param sender subaddress to check sender == relayer
+   * @param sender worker to check sender == relayer
    * @param relayer address of relayer who's stake is being burned
    * @param poolAddress instance address to get proper fee
    * */
@@ -209,22 +211,22 @@ contract RelayerRegistry is Initializable {
   }
 
   /**
-   * @notice This function should check if a subaddress is associated with a relayer
+   * @notice This function should check if a worker is associated with a relayer
    * @param toResolve address to check
    * @return true if is associated
    * */
   function isRelayer(address toResolve) external view returns (bool) {
-    return getMasterForSubaddress[toResolve] != address(0);
+    return getMasterForWorker[toResolve] != address(0);
   }
 
   /**
-   * @notice This function should check if a subaddress is registered to the relayer stated
+   * @notice This function should check if a worker is registered to the relayer stated
    * @param relayer relayer to check
    * @param toResolve address to check
    * @return true if registered
    * */
   function isRelayerRegistered(address relayer, address toResolve) external view returns (bool) {
-    return getMasterForSubaddress[toResolve] == relayer;
+    return getMasterForWorker[toResolve] == relayer;
   }
 
   /**
@@ -233,7 +235,7 @@ contract RelayerRegistry is Initializable {
    * @return relayer's ensHash
    * */
   function getRelayerEnsHash(address relayer) external view returns (bytes32) {
-    return getMetadataForRelayer[getMasterForSubaddress[relayer]].ensHash;
+    return getMetadataForRelayer[getMasterForWorker[relayer]].ensHash;
   }
 
   /**
@@ -242,7 +244,7 @@ contract RelayerRegistry is Initializable {
    * @return relayer's balance
    * */
   function getRelayerBalance(address relayer) external view returns (uint256) {
-    return getMetadataForRelayer[getMasterForSubaddress[relayer]].balance;
+    return getMetadataForRelayer[getMasterForWorker[relayer]].balance;
   }
 
   /**
@@ -253,7 +255,7 @@ contract RelayerRegistry is Initializable {
    * @param relayer relayer who's balance is to nullify
    * */
   function _nullifyBalance(address relayer) private {
-    address masterAddress = getMasterForSubaddress[relayer];
+    address masterAddress = getMasterForWorker[relayer];
     Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
     getMetadataForRelayer[masterAddress].balance = 0;
     emit RelayerBalanceNullified(relayer);
