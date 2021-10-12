@@ -37,7 +37,7 @@ contract RelayerRegistry is Initializable {
   using SafeERC20 for IERC20;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
-  address public governanceCallForwarder;
+  address public governance;
 
   IERC20 public torn;
   ITornadoStakingRewards public Staking;
@@ -58,8 +58,8 @@ contract RelayerRegistry is Initializable {
   event NewProxyRegistered(address indexed tornadoProxy);
   event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint256 indexed stakedAmount);
 
-  modifier onlyGovernanceCallForwarder() {
-    require(msg.sender == governanceCallForwarder, "only governance");
+  modifier onlyGovernance() {
+    require(msg.sender == governance, "only governance");
     _;
   }
 
@@ -90,7 +90,7 @@ contract RelayerRegistry is Initializable {
     address tornTokenAddress
   ) external initializer {
     RegistryData = RelayerRegistryData(registryDataAddress);
-    governanceCallForwarder = tornadoGovernance;
+    governance = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
     torn = IERC20(tornTokenAddress);
   }
@@ -188,7 +188,7 @@ contract RelayerRegistry is Initializable {
    * @notice This function should allow governance to set the minimum stake amount
    * @param minAmount new minimum stake amount
    * */
-  function setMinStakeAmount(uint256 minAmount) external onlyGovernanceCallForwarder {
+  function setMinStakeAmount(uint256 minAmount) external onlyGovernance {
     minStakeAmount = minAmount;
     emit NewMinimumStakeAmount(minAmount);
   }
@@ -197,7 +197,7 @@ contract RelayerRegistry is Initializable {
    * @notice This function should allow governance to set a new tornado proxy address
    * @param tornadoProxyAddress address of the new proxy
    * */
-  function registerProxy(address tornadoProxyAddress) external onlyGovernanceCallForwarder {
+  function registerProxy(address tornadoProxyAddress) external onlyGovernance {
     tornadoProxy = tornadoProxyAddress;
     emit NewProxyRegistered(tornadoProxyAddress);
   }
@@ -209,7 +209,7 @@ contract RelayerRegistry is Initializable {
    *      - Should nullify the balance
    * @param relayer address of relayer who's balance is to nullify
    * */
-  function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
+  function nullifyBalance(address relayer) external onlyGovernance {
     address masterAddress = getMasterForWorker[relayer];
     Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
     getMetadataForRelayer[masterAddress].balance = 0;

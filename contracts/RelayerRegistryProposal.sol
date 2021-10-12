@@ -13,7 +13,7 @@ import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStaking
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
-import { RegistryCallForwarder } from "./governance-upgrade/RegistryCallForwarder.sol";
+import { RelayerRegistry } from "./RelayerRegistry.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
@@ -25,7 +25,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
-  RegistryCallForwarder public immutable Forwarder;
+  RelayerRegistry public immutable Registry;
   TornadoStakingRewards public immutable Staking;
   TornadoInstancesData public immutable InstancesData;
 
@@ -33,9 +33,11 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public immutable newTornadoProxy;
   address public immutable gasCompLogic;
   address public immutable tornadoVault;
+  address public immutable registryData;
 
   constructor(
-    address callForwarderAddress,
+    address registryAddress,
+    address registryDataAddress,
     address oldTornadoProxyAddress,
     address newTornadoProxyAddress,
     address stakingAddress,
@@ -43,13 +45,14 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     address gasCompLogicAddress,
     address vaultAddress
   ) public {
-    Forwarder = RegistryCallForwarder(callForwarderAddress);
+    Registry = RelayerRegistry(registryAddress);
     newTornadoProxy = newTornadoProxyAddress;
     oldTornadoProxy = oldTornadoProxyAddress;
     Staking = TornadoStakingRewards(stakingAddress);
     InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
     gasCompLogic = gasCompLogicAddress;
     tornadoVault = vaultAddress;
+    registryData = registryDataAddress;
   }
 
   function executeProposal() external {
@@ -57,18 +60,20 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
     );
 
+    Registry.initialize(registryData, GovernanceAddress, address(Staking), address(tornToken));
+
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
-    Forwarder.forwardRegisterProxy(newTornadoProxy);
+    Registry.registerProxy(newTornadoProxy);
 
-    RelayerRegistryData RegistryData = Forwarder.getRegistryData();
+    RelayerRegistryData RegistryData = Registry.RegistryData();
 
     RegistryData.setProtocolFee(1e15);
     RegistryData.setPeriodForTWAPOracle(5400);
 
-    Staking.registerRelayerRegistry(address(Forwarder.Registry()));
+    Staking.registerRelayerRegistry(address(Registry));
 
-    Forwarder.forwardSetMinStakeAmount(100 ether);
+    Registry.setMinStakeAmount(100 ether);
 
     disableOldProxy();
   }

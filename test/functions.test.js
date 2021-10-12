@@ -33,10 +33,8 @@ describe('Data and Manager tests', () => {
   let RegistryData
 
   let RelayerRegistry
+  let RelayerRegistryImplementation
   let RegistryFactory
-
-  let ForwarderFactory
-  let ForwarderContract
 
   let StakingFactory
   let StakingContract
@@ -127,21 +125,12 @@ describe('Data and Manager tests', () => {
     StakingContract = await StakingFactory.deploy(governance, torn)
 
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
-    RelayerRegistry = await upgrades.deployProxy(RegistryFactory, {
-      initializer: false,
-    })
+    RelayerRegistryImplementation = await RegistryFactory.deploy()
 
-    ForwarderFactory = await ethers.getContractFactory('RegistryCallForwarder')
-    ForwarderContract = await ForwarderFactory.deploy(governance, RelayerRegistry.address)
+    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
-    await RelayerRegistry.initialize(
-      RegistryData.address,
-      ForwarderContract.address,
-      StakingContract.address,
-      torn,
-    )
-
-    await upgrades.admin.changeProxyAdmin(RelayerRegistry.address, governance)
+    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
+    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
@@ -177,7 +166,8 @@ describe('Data and Manager tests', () => {
     ////////////// PROPOSAL OPTION 1
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
-      ForwarderContract.address,
+      RelayerRegistry.address,
+      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
@@ -190,19 +180,6 @@ describe('Data and Manager tests', () => {
   })
 
   describe('Start of tests', () => {
-    describe('Initialization related', () => {
-      it('It should NOT be possible to call initialize again', async () => {
-        await expect(
-          RelayerRegistry.initialize(
-            RegistryData.address,
-            ForwarderContract.address,
-            StakingContract.address,
-            torn,
-          ),
-        ).to.be.reverted
-      })
-    })
-
     describe('Account setup procedure', () => {
       it('Should successfully imitate a torn whale', async function () {
         await sendr('hardhat_impersonateAccount', ['0xA2b2fBCaC668d86265C45f62dA80aAf3Fd1dEde3'])
@@ -758,8 +735,8 @@ describe('Data and Manager tests', () => {
 
     describe('Test governance interaction', () => {
       it('Should nullify relayers balance', async () => {
-        const forwarder = await ForwarderContract.connect(impGov)
-        await forwarder.forwardNullifyBalance(relayers[3].address)
+        const registry = await RelayerRegistry.connect(impGov)
+        await registry.nullifyBalance(relayers[3].address)
 
         const balance = await RelayerRegistry.getRelayerBalance(relayers[3].address)
 
