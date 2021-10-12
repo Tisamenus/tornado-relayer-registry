@@ -23,6 +23,8 @@ struct GlobalPoolData {
   bool[] etherIndices;
 }
 
+/// @notice Upgradeable contract which calculates the fee for each pool
+/// @dev If you want to modify how staking works update this contract + the registry contract
 contract RegistryDataManager {
   using SafeMath for uint256;
 
@@ -30,6 +32,12 @@ contract RegistryDataManager {
   uint24 public constant uniPoolFeeTorn = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
+  /**
+   * @notice function to update the entire array of pools
+   * @param poolIdToPoolData array of pool data which will be used as input to construct the new array
+   * @param globalPoolData data which is independent of each pool
+   * @return newPoolIdToFee the new fee array
+   */
   function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData memory globalPoolData)
     public
     view
@@ -41,6 +49,12 @@ contract RegistryDataManager {
     }
   }
 
+  /**
+   * @notice function to update a single fee entry
+   * @param poolData data of the pool for which to update fees
+   * @param globalPoolData data which is independent of each pool
+   * @return newFee the new fee pool
+   */
   function updateSingleRegistryDataArrayElement(
     PoolData memory poolData,
     GlobalPoolData memory globalPoolData,

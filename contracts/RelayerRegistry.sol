@@ -7,6 +7,7 @@ import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;
@@ -33,6 +34,7 @@ struct RelayerMetadata {
  * */
 contract RelayerRegistry is Initializable {
   using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
   address public governanceCallForwarder;
@@ -95,7 +97,7 @@ contract RelayerRegistry is Initializable {
 
   /**
    * @notice This function should register a master address and optionally a set of workeres for a relayer + metadata
-   * @dev Relayer can't steal other relayers workeres since they are registered, and a wallet (msg.sender check) can always unregister itself
+   * @dev Relayer can't steal other relayers workers since they are registered, and a wallet (msg.sender check) can always unregister itself
    * @param ensHash ensHash of the relayer
    * @param stake the initial amount of stake in TORN the relayer is depositing
    * */
@@ -110,7 +112,7 @@ contract RelayerRegistry is Initializable {
     require(metadata.ensHash == bytes32(0), "registered already");
     require(stake >= minStakeAmount, "!min_stake");
 
-    _sendStakeToStaking(msg.sender, stake);
+    torn.safeTransferFrom(msg.sender, address(Staking), stake);
     emit StakeAddedToRelayer(msg.sender, stake);
 
     metadata.balance = stake;
@@ -155,8 +157,8 @@ contract RelayerRegistry is Initializable {
    * */
   function stakeToRelayer(address relayer, uint256 stake) external {
     require(getMasterForWorker[relayer] == relayer, "!registered");
-    _sendStakeToStaking(msg.sender, stake);
-    getMetadataForRelayer[relayer].balance = uint256(stake.add(getMetadataForRelayer[relayer].balance));
+    torn.safeTransferFrom(msg.sender, address(Staking), stake);
+    getMetadataForRelayer[relayer].balance = stake.add(getMetadataForRelayer[relayer].balance);
     emit StakeAddedToRelayer(relayer, stake);
   }
 
@@ -176,7 +178,7 @@ contract RelayerRegistry is Initializable {
     address relayer,
     address poolAddress
   ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
-    uint256 toBurn = RegistryData.getFeeForPoolId(RegistryData.getPoolIdForAddress(poolAddress));
+    uint256 toBurn = RegistryData.getFeeForPoolAddress(poolAddress);
     getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
@@ -202,11 +204,16 @@ contract RelayerRegistry is Initializable {
 
   /**
    * @notice This function should allow governance to nullify a relayers balance
-   * @dev IMPORTANT FUNCTION
+   * @dev IMPORTANT FUNCTION:
+   *      - Should add his entire rest balance as burned rewards
+   *      - Should nullify the balance
    * @param relayer address of relayer who's balance is to nullify
    * */
   function nullifyBalance(address relayer) external onlyGovernanceCallForwarder {
-    _nullifyBalance(relayer);
+    address masterAddress = getMasterForWorker[relayer];
+    Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
+    getMetadataForRelayer[masterAddress].balance = 0;
+    emit RelayerBalanceNullified(relayer);
   }
 
   /**
@@ -244,28 +251,5 @@ contract RelayerRegistry is Initializable {
    * */
   function getRelayerBalance(address relayer) external view returns (uint256) {
     return getMetadataForRelayer[getMasterForWorker[relayer]].balance;
-  }
-
-  /**
-   * @notice This function nullify a relayers balance
-   * @dev IMPORTANT FUNCTION:
-   *      - Should add his entire rest balance as burned rewards
-   *      - Should nullify the balance
-   * @param relayer relayer who's balance is to nullify
-   * */
-  function _nullifyBalance(address relayer) private {
-    address masterAddress = getMasterForWorker[relayer];
-    Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
-    getMetadataForRelayer[masterAddress].balance = 0;
-    emit RelayerBalanceNullified(relayer);
-  }
-
-  /**
-   * @notice This function should send TORN to Staking
-   * @param sender address to transfer from
-   * @param stake amount to transfer
-   * */
-  function _sendStakeToStaking(address sender, uint256 stake) private {
-    require(torn.transferFrom(sender, address(Staking), stake), "transfer failed");
   }
 }

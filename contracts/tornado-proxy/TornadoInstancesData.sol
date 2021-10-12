@@ -11,6 +11,7 @@ contract TornadoInstancesData {
   constructor(TornadoProxy.Tornado[] memory instancesArray) public {
     for (uint256 i = 0; i < instancesArray.length; i++) {
       Instances.push(instancesArray[i]);
+      Instances[i].instance.state = TornadoProxy.InstanceState.DISABLED;
     }
   }
 

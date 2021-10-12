@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import "../RelayerRegistry.sol";
 
+/// @notice contract necessary to let proxy admin (gov) communicate with proxy (registry)
 contract RegistryCallForwarder {
   address public immutable governance;
   RelayerRegistry public immutable Registry;

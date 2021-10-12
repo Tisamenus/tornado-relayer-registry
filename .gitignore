@@ -7,3 +7,5 @@ dist
 coverage
 coverage.json
 .openzeppelin
+yarn.lock
+yarn-error.log
