@@ -36,7 +36,6 @@
     "tornado-anonymity-mining": "^2.1.5",
     "tornado-cli": "^0.0.1",
     "tornado-governance": "^1.0.3",
-    "tornado-lottery-period": "git+https://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:x-oauth-basic@github.com/Tisamenus/tornado-lottery-period.git#production",
     "tornado-trees": "^0.0.11"
   },
   "devDependencies": {
