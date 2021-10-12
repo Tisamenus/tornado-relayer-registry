@@ -22,7 +22,7 @@ import { TornadoTrees } from "tornado-trees/contracts/TornadoTrees.sol";
 contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   using SafeMath for uint256;
 
-  address public constant TornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
+  address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
   RegistryCallForwarder public immutable Forwarder;
@@ -57,7 +57,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
     );
 
-    TornadoTrees(TornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
+    TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
     Forwarder.forwardRegisterProxy(newTornadoProxy);
 

@@ -113,6 +113,13 @@ contract TornadoStakingRewards is ReentrancyGuard {
   }
 
   /**
+   * @notice This function should allow governance rescue tokens from the staking rewards contract
+   * */
+  function rescueTokens() external onlyGovernance {
+    torn.transfer(address(Governance), torn.balanceOf(address(this)));
+  }
+
+  /**
    * @notice This function should calculated the proper amount of rewards attributed to user since the last update
    * @dev IMPORTANT FUNCTION:
    *      - calculation must not overflow with extreme values
