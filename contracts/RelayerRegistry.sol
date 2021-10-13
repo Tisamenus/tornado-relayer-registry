@@ -9,6 +9,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;
 }
@@ -171,17 +173,24 @@ contract RelayerRegistry is Initializable {
    *      - Should underflow and revert (SafeMath) on not enough stake (balance)
    * @param sender worker to check sender == relayer
    * @param relayer address of relayer who's stake is being burned
-   * @param poolAddress instance address to get proper fee
+   * @param pool instance to get fee for
    * */
   function burn(
     address sender,
     address relayer,
-    address poolAddress
+    ITornadoInstance pool
   ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
-    uint256 toBurn = RegistryData.getFeeForPoolAddress(poolAddress);
+    (, uint256 toBurn) = RegistryData.getPoolDataForInstance(pool);
     getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
+  }
+
+  /**
+   *
+   * */
+  function addPool(uint96 uniPoolFee, ITornadoInstance pool) external onlyTornadoProxy {
+    RegistryData.addPool(uniPoolFee, pool);
   }
 
   /**

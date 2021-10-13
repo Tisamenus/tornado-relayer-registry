@@ -7,73 +7,65 @@ import { UniswapV3OracleHelper } from "../libraries/UniswapV3OracleHelper.sol";
 import { RelayerRegistryData } from "./RelayerRegistryData.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 
-interface ERC20Tornado {
-  function token() external view returns (address);
+import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+
+interface ITornadoProxy {
+  function getPoolToken(ITornadoInstance instance) external view returns (address);
 }
 
 struct PoolData {
   uint96 uniPoolFee;
-  address addressData;
+  uint160 protocolPoolFee;
 }
 
 struct GlobalPoolData {
   uint128 protocolFee;
   uint128 globalPeriod;
-  bool[] etherIndices;
 }
 
-/// @notice Upgradeable contract which calculates the fee for each pool
+/// @notice Upgradeable contract which calculates the fee for each pool, this is not a library due to upgradeability
 /// @dev If you want to modify how staking works update this contract + the registry contract
-contract RegistryDataManager {
+contract RegistryDataManager is Initializable {
   using SafeMath for uint256;
 
   // immutable variables need to have a value type, structs can't work
   uint24 public constant uniPoolFeeTorn = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
-  /**
-   * @notice function to update the entire array of pools
-   * @param poolIdToPoolData array of pool data which will be used as input to construct the new array
-   * @param globalPoolData data which is independent of each pool
-   * @return newPoolIdToFee the new fee array
-   */
-  function updateRegistryDataArray(PoolData[] memory poolIdToPoolData, GlobalPoolData memory globalPoolData)
-    public
-    view
-    returns (uint256[] memory newPoolIdToFee)
-  {
-    newPoolIdToFee = new uint256[](poolIdToPoolData.length);
-    for (uint256 i = 0; i < poolIdToPoolData.length; i++) {
-      newPoolIdToFee[i] = updateSingleRegistryDataArrayElement(poolIdToPoolData[i], globalPoolData, i);
-    }
+  ITornadoProxy public TornadoProxy;
+
+  function initialize(address tornadoProxy) external initializer {
+    TornadoProxy = ITornadoProxy(tornadoProxy);
   }
 
   /**
    * @notice function to update a single fee entry
    * @param poolData data of the pool for which to update fees
+   * @param instance instance for which to update data
    * @param globalPoolData data which is independent of each pool
    * @return newFee the new fee pool
    */
-  function updateSingleRegistryDataArrayElement(
+  function updateSingleRegistryPoolFee(
     PoolData memory poolData,
-    GlobalPoolData memory globalPoolData,
-    uint256 isEtherIndex
-  ) public view returns (uint256 newFee) {
-    if (!globalPoolData.etherIndices[isEtherIndex]) {
-      address token = ERC20Tornado(poolData.addressData).token();
-      newFee = IERC20(token).balanceOf(poolData.addressData).mul(1e18).div(
-        UniswapV3OracleHelper.getPriceRatioOfTokens(
-          [torn, token],
-          [uniPoolFeeTorn, uint24(poolData.uniPoolFee)],
-          uint32(globalPoolData.globalPeriod)
-        )
+    ITornadoInstance instance,
+    GlobalPoolData memory globalPoolData
+  ) public view returns (uint160 newFee) {
+    return
+      uint160(
+        instance
+          .denomination()
+          .mul(1e18)
+          .div(
+            UniswapV3OracleHelper.getPriceRatioOfTokens(
+              [torn, TornadoProxy.getPoolToken(instance)],
+              [uniPoolFeeTorn, uint24(poolData.uniPoolFee)],
+              uint32(globalPoolData.globalPeriod)
+            )
+          )
+          .mul(uint256(globalPoolData.protocolFee))
+          .div(1e18)
       );
-    } else {
-      newFee = poolData.addressData.balance.mul(1e18).div(
-        UniswapV3OracleHelper.getPriceOfTokenInWETH(torn, uniPoolFeeTorn, uint32(globalPoolData.globalPeriod))
-      );
-    }
-    newFee = newFee.mul(uint256(globalPoolData.protocolFee)).div(1e18);
   }
 }

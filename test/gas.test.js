@@ -14,8 +14,12 @@ describe('Data and Manager tests', () => {
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
-  // eslint-disable-next-line
   let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
+  let feesArray = []
+
+  for (let i = 0; i < denominations.length; i++) {
+    feesArray[i] = BigNumber.from(denominations[i]).mul('100').div('10000')
+  }
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -106,6 +110,7 @@ describe('Data and Manager tests', () => {
 
     DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, {
       unsafeAllow: ['external-library-linking'],
+      initializer: false,
     })
 
     await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
@@ -115,8 +120,9 @@ describe('Data and Manager tests', () => {
     RegistryData = await RegistryDataFactory.deploy(
       DataManagerProxy.address,
       governance,
-      uniswapPoolFees,
       tornadoPools,
+      uniswapPoolFees,
+      feesArray,
     )
 
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')

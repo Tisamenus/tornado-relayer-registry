@@ -5,17 +5,19 @@ pragma experimental ABIEncoderV2;
 
 import { RegistryDataManager, PoolData, GlobalPoolData } from "./RegistryDataManager.sol";
 
+import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+
 /// @notice Contract which holds important data related to each tornado instance
 contract RelayerRegistryData {
   address public immutable governance;
   RegistryDataManager public immutable DataManager;
 
-  PoolData[] public getPoolDataForPoolId;
-  uint256[] public getFeeForPoolId;
-
-  mapping(address => uint256) public getPoolIdForAddress;
+  mapping(ITornadoInstance => PoolData) public getPoolDataForInstance;
+  ITornadoInstance[] public getInstanceForPoolId;
 
   GlobalPoolData public dataForTWAPOracle;
+
+  address public registry;
 
   event FeesUpdated(uint256 indexed timestamp);
   event FeeUpdated(uint256 indexed timestamp, uint256 indexed poolId);
@@ -23,22 +25,16 @@ contract RelayerRegistryData {
   constructor(
     address dataManagerProxy,
     address tornadoGovernance,
-    uint96[] memory initPoolDataFees,
-    address[] memory initPoolDataAddresses
+    address[] memory initPoolDataAddresses,
+    uint96[] memory initUniPoolFees,
+    uint160[] memory initProtocolPoolFees
   ) public {
     DataManager = RegistryDataManager(dataManagerProxy);
     governance = tornadoGovernance;
 
-    for (uint256 i = 0; i < initPoolDataFees.length; i++) {
-      getPoolDataForPoolId.push(PoolData(initPoolDataFees[i], initPoolDataAddresses[i]));
-      getPoolIdForAddress[initPoolDataAddresses[i]] = getPoolDataForPoolId.length - 1;
-    }
-
-    bool[] storage indexes = dataForTWAPOracle.etherIndices;
-
-    for (uint256 i = 0; i < initPoolDataFees.length; i++) {
-      if (i < 4) indexes.push(true);
-      else indexes.push(false);
+    for (uint256 i = 0; i < initUniPoolFees.length; i++) {
+      getPoolDataForInstance[ITornadoInstance(initPoolDataAddresses[i])] = PoolData(initUniPoolFees[i], initProtocolPoolFees[i]);
+      getInstanceForPoolId.push(ITornadoInstance(initPoolDataAddresses[i]));
     }
   }
 
@@ -47,12 +43,21 @@ contract RelayerRegistryData {
     _;
   }
 
+  modifier onlyRelayerRegistry() {
+    require(msg.sender == registry, "only governance");
+    _;
+  }
+
+  function registerRegistry(address registryAddress) external onlyGovernance {
+    registry = registryAddress;
+  }
+
   /**
    * @notice This function should update the fees for poolIds tornado instances
    *         (here called pools)
    * @param poolIds poolIds to update fees for
    * */
-  function updateFeesOfPools(uint256[] memory poolIds) external {
+  function updateFeesOfPools(uint256[] memory poolIds) public {
     for (uint256 i = 0; i < poolIds.length; i++) {
       updateFeeOfPool(poolIds[i]);
     }
@@ -61,23 +66,11 @@ contract RelayerRegistryData {
   /**
    * @notice This function should allow governance to register a new tornado erc20 instance
    * @param uniPoolFee fee of the uniswap pool used to get prices
-   * @param poolAddress address of the instance
+   * @param pool the tornado instance
    * @return poolId id of the pool
    * */
-  function addPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256 poolId) {
-    poolId = _addPool(uniPoolFee, poolAddress);
-    dataForTWAPOracle.etherIndices.push(false);
-  }
-
-  /**
-   * @notice This function should allow governance to register a new tornado eth instance
-   * @param uniPoolFee fee of the uniswap pool used to get prices (here irrelevant!)
-   * @param poolAddress address of the instance
-   * @return poolId id of the pool
-   * */
-  function addEtherPool(uint96 uniPoolFee, address poolAddress) external onlyGovernance returns (uint256 poolId) {
-    poolId = _addPool(uniPoolFee, poolAddress);
-    dataForTWAPOracle.etherIndices.push(true);
+  function addPool(uint96 uniPoolFee, ITornadoInstance pool) external onlyRelayerRegistry returns (uint256 poolId) {
+    poolId = _addPool(uniPoolFee, pool);
   }
 
   /**
@@ -98,19 +91,20 @@ contract RelayerRegistryData {
 
   /**
    * @notice This function should get the fee for the pool address in one go
-   * @dev getFeeForPoolId is an array to so we can iterate it to update prices
-   * @param pool address of the tornado instance
+   * @param pool the tornado instance
    * @return fee for the pool
    * */
-  function getFeeForPoolAddress(address pool) external view returns (uint256) {
-    return getFeeForPoolId[getPoolIdForAddress[pool]];
+  function getFeeForPool(ITornadoInstance pool) external view returns (uint256) {
+    return getPoolDataForInstance[pool].protocolPoolFee;
   }
 
   /**
    * @notice This function should update the fees of each pool
    */
   function updateAllFees() public {
-    getFeeForPoolId = DataManager.updateRegistryDataArray(getPoolDataForPoolId, dataForTWAPOracle);
+    for (uint256 i = 0; i < getInstanceForPoolId.length; i++) {
+      updateFeeOfPool(i);
+    }
     emit FeesUpdated(block.timestamp);
   }
 
@@ -119,10 +113,11 @@ contract RelayerRegistryData {
    * @param poolId id of the pool to update fees for
    */
   function updateFeeOfPool(uint256 poolId) public {
-    getFeeForPoolId[poolId] = DataManager.updateSingleRegistryDataArrayElement(
-      getPoolDataForPoolId[poolId],
-      dataForTWAPOracle,
-      poolId
+    ITornadoInstance instance = getInstanceForPoolId[poolId];
+    getPoolDataForInstance[instance].protocolPoolFee = DataManager.updateSingleRegistryPoolFee(
+      getPoolDataForInstance[instance],
+      instance,
+      dataForTWAPOracle
     );
     emit FeeUpdated(block.timestamp, poolId);
   }
@@ -130,12 +125,14 @@ contract RelayerRegistryData {
   /**
    * @notice internal function to add a pool
    * @param uniPoolFee fee of the uniswap pool used to get prices (here irrelevant!)
-   * @param poolAddress address of the instance
+   * @param pool the tornado instance
    */
-  function _addPool(uint96 uniPoolFee, address poolAddress) internal returns (uint256) {
-    getPoolDataForPoolId.push(PoolData(uniPoolFee, poolAddress));
-    getPoolIdForAddress[poolAddress] = getPoolDataForPoolId.length - 1;
-    getFeeForPoolId.push(0);
-    return getPoolDataForPoolId.length - 1;
+  function _addPool(uint96 uniPoolFee, ITornadoInstance pool) internal returns (uint256) {
+    getPoolDataForInstance[pool] = PoolData(
+      uniPoolFee,
+      DataManager.updateSingleRegistryPoolFee(PoolData(uniPoolFee, 0), pool, dataForTWAPOracle)
+    );
+    getInstanceForPoolId.push(pool);
+    return getInstanceForPoolId.length - 1;
   }
 }

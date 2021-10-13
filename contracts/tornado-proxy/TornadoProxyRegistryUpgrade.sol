@@ -3,14 +3,16 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+import "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
 interface IRelayerRegistry {
   function burn(
     address sender,
     address relayer,
-    address poolAddress
+    ITornadoInstance pool
   ) external;
+
+  function addPool(uint96 uniPoolFee, ITornadoInstance pool) external;
 }
 
 contract TornadoProxyRegistryUpgrade is TornadoProxy {
@@ -25,6 +27,15 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     Registry = IRelayerRegistry(registryAddress);
   }
 
+  function getPoolToken(ITornadoInstance instance) external view returns (address) {
+    return address(instances[instance].token);
+  }
+
+  function addInstance(uint96 uniPoolFee, Tornado calldata _tornado) external virtual onlyGovernance {
+    _updateInstance(_tornado);
+    Registry.addPool(uniPoolFee, _tornado.addr);
+  }
+
   function withdraw(
     ITornadoInstance _tornado,
     bytes calldata _proof,
@@ -35,7 +46,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxy {
     uint256 _fee,
     uint256 _refund
   ) public payable virtual override {
-    if (_relayer != address(0)) Registry.burn(msg.sender, _relayer, address(_tornado));
+    if (_relayer != address(0)) Registry.burn(msg.sender, _relayer, _tornado);
 
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }

@@ -10,11 +10,17 @@ const MixerABI = require('tornado-cli/build/contracts/Mixer.abi.json')
 describe('Data and Manager tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
+  const instancePath = 'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance'
 
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
   let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
+  let feesArray = []
+
+  for (let i = 0; i < denominations.length; i++) {
+    feesArray[i] = BigNumber.from(denominations[i]).mul('100').div('10000')
+  }
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -105,6 +111,7 @@ describe('Data and Manager tests', () => {
 
     DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, {
       unsafeAllow: ['external-library-linking'],
+      initializer: false,
     })
 
     await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
@@ -114,8 +121,9 @@ describe('Data and Manager tests', () => {
     RegistryData = await RegistryDataFactory.deploy(
       DataManagerProxy.address,
       governance,
-      uniswapPoolFees,
       tornadoPools,
+      uniswapPoolFees,
+      feesArray,
     )
 
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
@@ -351,8 +359,9 @@ describe('Data and Manager tests', () => {
 
       it('Should be able to add a pool and update its fees and print', async () => {
         const datagov = await RegistryData.connect(impGov)
+        const proxygov = await TornadoProxy.connect(impGov)
         let index = tornadoPools.length - 1
-        await datagov.addPool(10000, tornadoPools[index])
+        await proxygov.addPool(10000, await ethers.getContractAt(instancePath, tornadoPools[index]))
         index++
         await datagov.updateFeeOfPool(index)
         index--
@@ -385,7 +394,7 @@ describe('Data and Manager tests', () => {
 
       it('Should fail if trying the same but making the ether pool an erc20', async () => {
         const datagov = await RegistryData.connect(impGov)
-        await datagov.addPool(10000, tornadoPools[0])
+        await ethers.getContractAt(instancePath, tornadoPools[index])
         await expect(datagov.updateFeeOfPool(tornadoPools.length + 2)).to.be.reverted
       })
     })
@@ -474,10 +483,7 @@ describe('Data and Manager tests', () => {
         const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
         const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
-        const instance = await ethers.getContractAt(
-          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
-          instanceAddress,
-        )
+        const instance = await ethers.getContractAt(instancePath, instanceAddress)
         const proxy = await TornadoProxy.connect(daiWhale)
         const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
 
@@ -532,10 +538,7 @@ describe('Data and Manager tests', () => {
 
         const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
-        const instance = await ethers.getContractAt(
-          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
-          instanceAddress,
-        )
+        const instance = await ethers.getContractAt(instancePath, instanceAddress)
         const proxy = await TornadoProxy.connect(daiWhale)
         const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
 
@@ -664,10 +667,7 @@ describe('Data and Manager tests', () => {
         const initialShareValue = await StakingContract.accumulatedRewardPerTorn()
         const initialBalance = await RelayerRegistry.getRelayerBalance(relayers[0].address)
 
-        const instance = await ethers.getContractAt(
-          'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance',
-          instanceAddress,
-        )
+        const instance = await ethers.getContractAt(instancePath, instanceAddress)
         const proxy = await TornadoProxy.connect(daiWhale)
         const mixer = (await ethers.getContractAt(MixerABI, instanceAddress)).connect(daiWhale)
 

@@ -12,6 +12,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
+import { RegistryDataManager } from "./registry-data/RegistryDataManager.sol";
 import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
 
@@ -70,6 +71,10 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     RegistryData.setProtocolFee(1e15);
     RegistryData.setPeriodForTWAPOracle(5400);
+
+    RegistryDataManager DataManager = RegistryData.DataManager();
+
+    DataManager.initialize(newTornadoProxy);
 
     Staking.registerRelayerRegistry(address(Registry));
 
