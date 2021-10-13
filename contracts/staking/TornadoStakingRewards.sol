@@ -126,7 +126,7 @@ contract TornadoStakingRewards {
    * @return claimed the rewards attributed to user since the last update
    */
   function _updateReward(address account, uint256 amountLockedBeforehand) private returns (uint256 claimed) {
-    if (claimed != 0)
+    if (amountLockedBeforehand != 0)
       claimed = (accumulatedRewardPerTorn.sub(accumulatedRewardRateOnLastUpdate[account])).mul(amountLockedBeforehand).div(
         ratioConstant
       );
