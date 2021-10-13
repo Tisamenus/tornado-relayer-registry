@@ -10,6 +10,7 @@ import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProx
 /// @notice Contract which holds important data related to each tornado instance
 contract RelayerRegistryData {
   address public immutable governance;
+  address public immutable registry;
 
   mapping(ITornadoInstance => PoolData) public getPoolDataForInstance;
   ITornadoInstance[] public getInstanceForPoolId;
@@ -17,13 +18,12 @@ contract RelayerRegistryData {
   GlobalPoolData public dataForTWAPOracle;
   RegistryDataManager public DataManager;
 
-  address public registry;
-
   event FeesUpdated(uint256 indexed timestamp);
   event FeeUpdated(uint256 indexed timestamp, uint256 indexed poolId);
 
   constructor(
     address dataManagerProxy,
+    address relayerRegistryAddress,
     address tornadoGovernance,
     address[] memory initPoolDataAddresses,
     uint96[] memory initUniPoolFees,
@@ -31,6 +31,7 @@ contract RelayerRegistryData {
   ) public {
     DataManager = RegistryDataManager(dataManagerProxy);
     governance = tornadoGovernance;
+    registry = relayerRegistryAddress;
 
     for (uint256 i = 0; i < initUniPoolFees.length; i++) {
       getPoolDataForInstance[ITornadoInstance(initPoolDataAddresses[i])] = PoolData(initUniPoolFees[i], initProtocolPoolFees[i]);
@@ -46,10 +47,6 @@ contract RelayerRegistryData {
   modifier onlyRelayerRegistry() {
     require(msg.sender == registry, "only registry");
     _;
-  }
-
-  function registerRelayerRegistry(address registryAddress) external onlyGovernance {
-    registry = registryAddress;
   }
 
   /**
@@ -91,10 +88,19 @@ contract RelayerRegistryData {
 
   /**
    * @notice This function should get the fee for the pool address in one go
+   * @param poolId the tornado pool id
+   * @return fee for the pool
+   * */
+  function getFeeForPoolId(uint256 poolId) public view returns (uint256) {
+    return getPoolDataForInstance[getInstanceForPoolId[poolId]].protocolPoolFee;
+  }
+
+  /**
+   * @notice This function should get the fee for the pool via the instance as a key
    * @param pool the tornado instance
    * @return fee for the pool
    * */
-  function getFeeForPool(ITornadoInstance pool) external view returns (uint256) {
+  function getFeeForPool(ITornadoInstance pool) public view returns (uint256) {
     return getPoolDataForInstance[pool].protocolPoolFee;
   }
 

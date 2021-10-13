@@ -7,7 +7,7 @@ const { BigNumber } = require('@ethersproject/bignumber')
 const { rbigint, createDeposit, toHex, generateProof, initialize } = require('tornado-cli')
 const MixerABI = require('tornado-cli/build/contracts/Mixer.abi.json')
 
-describe('Data and Manager tests', () => {
+describe('General functionality tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
   const instancePath = 'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance'
@@ -16,11 +16,9 @@ describe('Data and Manager tests', () => {
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
   let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
-  let feesArray = []
-
-  for (let i = 0; i < denominations.length; i++) {
-    feesArray[i] = BigNumber.from(denominations[i]).mul('100').div('10000')
-  }
+  let feesArray = [
+    100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+  ]
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -103,6 +101,8 @@ describe('Data and Manager tests', () => {
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
     OracleHelperLibrary = await OracleHelperFactory.deploy()
 
+    //// PROXY DEPLOYMENTS
+
     DataManagerFactory = await ethers.getContractFactory('RegistryDataManager', {
       libraries: {
         UniswapV3OracleHelper: OracleHelperLibrary.address,
@@ -114,12 +114,22 @@ describe('Data and Manager tests', () => {
       initializer: false,
     })
 
-    await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
+    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
+    RelayerRegistryImplementation = await RegistryFactory.deploy()
+
+    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
+
+    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
+
+    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
+
+    ////////////////////////
 
     RegistryDataFactory = await ethers.getContractFactory('RelayerRegistryData')
 
     RegistryData = await RegistryDataFactory.deploy(
       DataManagerProxy.address,
+      RelayerRegistry.address,
       governance,
       tornadoPools,
       uniswapPoolFees,
@@ -130,15 +140,7 @@ describe('Data and Manager tests', () => {
     MockVault = await MockVaultFactory.deploy()
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
-    StakingContract = await StakingFactory.deploy(governance, torn)
-
-    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
-    RelayerRegistryImplementation = await RegistryFactory.deploy()
-
-    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
-
-    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
-    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
+    StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
@@ -154,12 +156,17 @@ describe('Data and Manager tests', () => {
     }
 
     TornadoProxyFactory = await ethers.getContractFactory('TornadoProxyRegistryUpgrade')
+
     TornadoProxy = await TornadoProxyFactory.deploy(
       RelayerRegistry.address,
       tornadoTrees,
       governance,
       TornadoInstances,
     )
+
+    await DataManagerProxy.initialize(TornadoProxy.address)
+
+    await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
 
     for (let i = 0; i < TornadoInstances.length; i++) {
       TornadoInstances[i].instance.state = 0
@@ -361,7 +368,8 @@ describe('Data and Manager tests', () => {
         const datagov = await RegistryData.connect(impGov)
         const proxygov = await TornadoProxy.connect(impGov)
         let index = tornadoPools.length - 1
-        await proxygov.addPool(10000, await ethers.getContractAt(instancePath, tornadoPools[index]))
+
+        await proxygov.addInstance(10000, TornadoInstances[index])
         index++
         await datagov.updateFeeOfPool(index)
         index--
@@ -378,7 +386,9 @@ describe('Data and Manager tests', () => {
 
       it('Should be able to add an ether pool and update its fees and print', async () => {
         const datagov = await RegistryData.connect(impGov)
-        await datagov.addEtherPool(0, tornadoPools[0])
+        const proxygov = await TornadoProxy.connect(impGov)
+
+        await proxygov.addInstance(10000, TornadoInstances[0])
         await datagov.updateFeeOfPool(tornadoPools.length + 1)
 
         console.log(
@@ -390,12 +400,6 @@ describe('Data and Manager tests', () => {
         )
 
         await datagov.updateAllFees()
-      })
-
-      it('Should fail if trying the same but making the ether pool an erc20', async () => {
-        const datagov = await RegistryData.connect(impGov)
-        await ethers.getContractAt(instancePath, tornadoPools[index])
-        await expect(datagov.updateFeeOfPool(tornadoPools.length + 2)).to.be.reverted
       })
     })
 
@@ -532,6 +536,12 @@ describe('Data and Manager tests', () => {
         console.log('Signer 0 accumulatedRewards: ', balance.toString())
       })
 
+      it('Should test governance balance nullification', async () => {
+        const registry = await RelayerRegistry.connect(impGov)
+        await registry.nullifyBalance(relayers[0].address)
+        expect(await registry.getRelayerBalance(relayers[0].address)).to.equal(0)
+      })
+
       it('This time around relayer should not have enough funds for withdrawal', async function () {
         const daiToken = await (await getToken(dai)).connect(daiWhale)
         const instanceAddress = tornadoPools[6]
@@ -657,7 +667,7 @@ describe('Data and Manager tests', () => {
 
         await registry.stakeToRelayer(relayers[0].address, k1)
 
-        expect(await registry.getRelayerBalance(relayers[0].address)).to.be.gt(k1)
+        expect(await registry.getRelayerBalance(relayers[0].address)).to.equal(k1)
       })
 
       it('Should succesfully deposit and withdraw from / into the instance we staked to', async function () {

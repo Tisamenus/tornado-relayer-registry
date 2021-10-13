@@ -7,19 +7,16 @@ const { BigNumber } = require('@ethersproject/bignumber')
 const { rbigint, createDeposit, toHex, generateProof, initialize } = require('tornado-cli')
 const MixerABI = require('tornado-cli/build/contracts/Mixer.abi.json')
 
-describe('Data and Manager tests', () => {
+describe('Gas tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
 
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
-  let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
-  let feesArray = []
-
-  for (let i = 0; i < denominations.length; i++) {
-    feesArray[i] = BigNumber.from(denominations[i]).mul('100').div('10000')
-  }
+  let feesArray = [
+    100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+  ]
 
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
@@ -85,12 +82,6 @@ describe('Data and Manager tests', () => {
     return await token.transfer(recipientAddress, amount)
   }
 
-  // eslint-disable-next-line
-  let erc20BalanceOf = async (tokenAddress, addressToCheck) => {
-    const token = await getToken(tokenAddress)
-    return await token.balanceOf(addressToCheck)
-  }
-
   let minewait = async (time) => {
     await ethers.provider.send('evm_increaseTime', [time])
     await ethers.provider.send('evm_mine', [])
@@ -101,6 +92,8 @@ describe('Data and Manager tests', () => {
 
     OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
     OracleHelperLibrary = await OracleHelperFactory.deploy()
+
+    //// PROXY DEPLOYMENTS
 
     DataManagerFactory = await ethers.getContractFactory('RegistryDataManager', {
       libraries: {
@@ -113,12 +106,22 @@ describe('Data and Manager tests', () => {
       initializer: false,
     })
 
-    await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
+    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
+    RelayerRegistryImplementation = await RegistryFactory.deploy()
+
+    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
+
+    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
+
+    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
+
+    ////////////////////////
 
     RegistryDataFactory = await ethers.getContractFactory('RelayerRegistryData')
 
     RegistryData = await RegistryDataFactory.deploy(
       DataManagerProxy.address,
+      RelayerRegistry.address,
       governance,
       tornadoPools,
       uniswapPoolFees,
@@ -129,15 +132,7 @@ describe('Data and Manager tests', () => {
     MockVault = await MockVaultFactory.deploy()
 
     StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
-    StakingContract = await StakingFactory.deploy(governance, torn)
-
-    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
-    RelayerRegistryImplementation = await RegistryFactory.deploy()
-
-    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
-
-    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
-    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
+    StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const Instance = {
@@ -153,12 +148,17 @@ describe('Data and Manager tests', () => {
     }
 
     TornadoProxyFactory = await ethers.getContractFactory('TornadoProxyRegistryUpgrade')
+
     TornadoProxy = await TornadoProxyFactory.deploy(
       RelayerRegistry.address,
       tornadoTrees,
       governance,
       TornadoInstances,
     )
+
+    await DataManagerProxy.initialize(TornadoProxy.address)
+
+    await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
 
     for (let i = 0; i < TornadoInstances.length; i++) {
       TornadoInstances[i].instance.state = 0

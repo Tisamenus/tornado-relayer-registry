@@ -34,7 +34,7 @@ contract TornadoStakingRewards is ReentrancyGuard {
   uint256 public immutable ratioConstant;
 
   /// @notice registry contract (actually proxy) address exclusively used for access check
-  address public relayerRegistry;
+  address public immutable registry;
   /// @notice the sum torn_burned_i/locked_amount_i*coefficient where i is incremented at each burn
   uint256 public accumulatedRewardPerTorn;
 
@@ -47,10 +47,15 @@ contract TornadoStakingRewards is ReentrancyGuard {
   event RewardsClaimed(address indexed account, uint256 indexed rewardsClaimed);
   event AccumulatedRewardPerTornUpdated(uint256 indexed newRewardPerTorn);
 
-  constructor(address governanceAddress, address tornAddress) public {
+  constructor(
+    address governanceAddress,
+    address relayerRegistryAddress,
+    address tornAddress
+  ) public {
     Governance = ITornadoGovernance(governanceAddress);
     torn = IERC20(tornAddress);
     ratioConstant = IERC20(tornAddress).totalSupply();
+    registry = relayerRegistryAddress;
   }
 
   modifier onlyGovernance() {
@@ -59,7 +64,7 @@ contract TornadoStakingRewards is ReentrancyGuard {
   }
 
   modifier onlyRelayerRegistry() {
-    require(msg.sender == relayerRegistry, "only relayer registry");
+    require(msg.sender == registry, "only relayer registry");
     _;
   }
 
@@ -78,14 +83,6 @@ contract TornadoStakingRewards is ReentrancyGuard {
     accumulatedRewards[msg.sender] = 0;
     torn.safeTransfer(msg.sender, rewards);
     emit RewardsClaimed(msg.sender, rewards);
-  }
-
-  /**
-   * @notice This function should allow governance to register a new registry
-   * @param relayerRegistryAddress registry to register
-   */
-  function registerRelayerRegistry(address relayerRegistryAddress) external onlyGovernance {
-    relayerRegistry = relayerRegistryAddress;
   }
 
   /**

@@ -27,7 +27,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
 
   RelayerRegistry public immutable Registry;
-  TornadoStakingRewards public immutable Staking;
   TornadoInstancesData public immutable InstancesData;
 
   address public immutable oldTornadoProxy;
@@ -35,6 +34,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public immutable gasCompLogic;
   address public immutable tornadoVault;
   address public immutable registryData;
+  address public immutable staking;
 
   constructor(
     address registryAddress,
@@ -49,7 +49,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     Registry = RelayerRegistry(registryAddress);
     newTornadoProxy = newTornadoProxyAddress;
     oldTornadoProxy = oldTornadoProxyAddress;
-    Staking = TornadoStakingRewards(stakingAddress);
+    staking = stakingAddress;
     InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
     gasCompLogic = gasCompLogicAddress;
     tornadoVault = vaultAddress;
@@ -58,10 +58,10 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
   function executeProposal() external {
     LoopbackProxy(returnPayableGovernance()).upgradeTo(
-      address(new GovernanceStakingUpgrade(address(Staking), gasCompLogic, tornadoVault))
+      address(new GovernanceStakingUpgrade(staking, gasCompLogic, tornadoVault))
     );
 
-    Registry.initialize(registryData, GovernanceAddress, address(Staking), address(tornToken));
+    Registry.initialize(registryData, GovernanceAddress, staking, address(tornToken));
 
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
@@ -72,14 +72,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     RegistryData.setProtocolFee(1e15);
     RegistryData.setPeriodForTWAPOracle(5400);
 
-    RegistryDataManager DataManager = RegistryData.DataManager();
-
-    RegistryData.registerRelayerRegistry(address(Registry));
-
-    DataManager.initialize(newTornadoProxy);
-
-    Staking.registerRelayerRegistry(address(Registry));
-
     Registry.setMinStakeAmount(100 ether);
 
     disableOldProxy();
@@ -87,6 +79,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
   function disableOldProxy() private {
     TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
+
     TornadoProxy.Tornado[] memory Instances = InstancesData.getInstances();
 
     for (uint256 i = 0; i < Instances.length; i++) {
