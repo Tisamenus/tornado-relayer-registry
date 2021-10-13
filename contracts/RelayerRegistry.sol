@@ -3,13 +3,13 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+import "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
+
 
 interface ITornadoStakingRewards {
   function addBurnRewards(uint256 amount) external;
@@ -43,10 +43,9 @@ contract RelayerRegistry is Initializable {
 
   IERC20 public torn;
   ITornadoStakingRewards public Staking;
-  RelayerRegistryData public RegistryData;
+  TornadoProxyRegistryUpgrade public TornadoProxy;
 
   uint256 public minStakeAmount;
-  address public tornadoProxy;
 
   mapping(address => RelayerMetadata) public getMetadataForRelayer;
   mapping(address => address) public getMasterForWorker;
@@ -66,7 +65,7 @@ contract RelayerRegistry is Initializable {
   }
 
   modifier onlyTornadoProxy() {
-    require(msg.sender == tornadoProxy, "only proxy");
+    require(msg.sender == address(TornadoProxy), "only proxy");
     _;
   }
 
@@ -86,12 +85,10 @@ contract RelayerRegistry is Initializable {
    *      params left out because self explainable
    * */
   function initialize(
-    address registryDataAddress,
     address tornadoGovernance,
     address stakingAddress,
     address tornTokenAddress
   ) external initializer {
-    RegistryData = RelayerRegistryData(registryDataAddress);
     governance = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
     torn = IERC20(tornTokenAddress);
@@ -180,17 +177,10 @@ contract RelayerRegistry is Initializable {
     address relayer,
     ITornadoInstance pool
   ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
-    (, uint256 toBurn) = RegistryData.getPoolDataForInstance(pool);
+    uint256 toBurn = TornadoProxy.getFeeForPool(pool);
     getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
-  }
-
-  /**
-   *
-   * */
-  function addPool(uint96 uniPoolFee, ITornadoInstance pool) external onlyTornadoProxy {
-    RegistryData.addPool(uniPoolFee, pool);
   }
 
   /**
@@ -207,7 +197,7 @@ contract RelayerRegistry is Initializable {
    * @param tornadoProxyAddress address of the new proxy
    * */
   function registerProxy(address tornadoProxyAddress) external onlyGovernance {
-    tornadoProxy = tornadoProxyAddress;
+    TornadoProxy = TornadoProxyRegistryUpgrade(tornadoProxyAddress);
     emit NewProxyRegistered(tornadoProxyAddress);
   }
 

@@ -9,7 +9,8 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 
-import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
+import "../tornado-proxy/ModifiedTornadoProxy.sol";
 
 interface ITornadoProxy {
   function getPoolToken(ITornadoInstance instance) external view returns (address);
@@ -17,7 +18,7 @@ interface ITornadoProxy {
 
 struct PoolData {
   uint96 uniPoolFee;
-  uint160 protocolPoolFee;
+  uint160 poolFee;
 }
 
 struct GlobalPoolData {
@@ -42,14 +43,14 @@ contract RegistryDataManager is Initializable {
 
   /**
    * @notice function to update a single fee entry
-   * @param poolData data of the pool for which to update fees
    * @param instance instance for which to update data
+   * @param instanceData data associated with the instance
    * @param globalPoolData data which is independent of each pool
    * @return newFee the new fee pool
    */
   function updateSingleRegistryPoolFee(
-    PoolData memory poolData,
     ITornadoInstance instance,
+    ModifiedTornadoProxy.Instance calldata instanceData,
     GlobalPoolData memory globalPoolData
   ) public view returns (uint160 newFee) {
     return
@@ -59,8 +60,8 @@ contract RegistryDataManager is Initializable {
           .mul(1e18)
           .div(
             UniswapV3OracleHelper.getPriceRatioOfTokens(
-              [torn, TornadoProxy.getPoolToken(instance)],
-              [uniPoolFeeTorn, uint24(poolData.uniPoolFee)],
+              [torn, instanceData.token],
+              [uniPoolFeeTorn, uint24(instanceData.poolData.uniPoolFee)],
               uint32(globalPoolData.globalPeriod)
             )
           )
