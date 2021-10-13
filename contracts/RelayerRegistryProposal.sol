@@ -11,10 +11,10 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
-import { RelayerRegistryData } from "./registry-data/RelayerRegistryData.sol";
 import { RegistryDataManager } from "./registry-data/RegistryDataManager.sol";
 import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
+import { TornadoProxyRegistryUpgrade } from "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
 
 import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
@@ -61,16 +61,16 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(staking, gasCompLogic, tornadoVault))
     );
 
-    Registry.initialize(registryData, GovernanceAddress, staking, address(tornToken));
+    Registry.initialize(GovernanceAddress, staking, address(tornToken));
 
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
     Registry.registerProxy(newTornadoProxy);
 
-    RelayerRegistryData RegistryData = Registry.RegistryData();
+    TornadoProxyRegistryUpgrade TornadoProxy = TornadoProxyRegistryUpgrade(newTornadoProxy);
 
-    RegistryData.setProtocolFee(1e15);
-    RegistryData.setPeriodForTWAPOracle(5400);
+    TornadoProxy.setProtocolFee(1e15);
+    TornadoProxy.setPeriodForTWAPOracle(5400);
 
     Registry.setMinStakeAmount(100 ether);
 

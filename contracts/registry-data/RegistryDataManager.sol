@@ -4,7 +4,6 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import { UniswapV3OracleHelper } from "../libraries/UniswapV3OracleHelper.sol";
-import { RelayerRegistryData } from "./RelayerRegistryData.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
@@ -60,7 +59,7 @@ contract RegistryDataManager is Initializable {
           .mul(1e18)
           .div(
             UniswapV3OracleHelper.getPriceRatioOfTokens(
-              [torn, instanceData.token],
+              [torn, address(instanceData.token)],
               [uniPoolFeeTorn, uint24(instanceData.poolData.uniPoolFee)],
               uint32(globalPoolData.globalPeriod)
             )

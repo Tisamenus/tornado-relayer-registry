@@ -17,13 +17,17 @@ contract ModifiedTornadoProxy {
   event InstanceStateUpdated(ITornadoInstance indexed instance, InstanceState state);
   event TornadoTreesUpdated(ITornadoTrees addr);
 
-  enum InstanceState { DISABLED, ENABLED, MINEABLE }
+  enum InstanceState {
+    DISABLED,
+    ENABLED,
+    MINEABLE
+  }
 
   struct Instance {
     bool isERC20;
     IERC20 token;
     InstanceState state;
-    PoolData poolData; // Addition of PoolData.
+    PoolData poolData;
   }
 
   struct Tornado {
@@ -145,4 +149,3 @@ contract ModifiedTornadoProxy {
     emit InstanceStateUpdated(_tornado.addr, _tornado.instance.state);
   }
 }
-

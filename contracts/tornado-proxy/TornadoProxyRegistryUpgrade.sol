@@ -18,9 +18,9 @@ interface IRelayerRegistry {
 
 contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
   IRelayerRegistry public immutable Registry;
+  RegistryDataManager public immutable DataManager;
 
   ITornadoInstance[] public getInstanceForPoolId;
-  RegistryDataManager public DataManager;
   GlobalPoolData public dataForTWAPOracle;
 
   event FeesUpdated(uint256 indexed timestamp);
@@ -36,7 +36,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
     Registry = IRelayerRegistry(registryAddress);
     DataManager = RegistryDataManager(dataManagerAddress);
 
-    for(uint256 i = 0; i < instances.length; i++) {
+    for (uint256 i = 0; i < instances.length; i++) {
       getInstanceForPoolId.push(instances[i].addr);
     }
   }
@@ -55,8 +55,12 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }
 
-  function updateInstance(Tornado calldata _tornado) external virtual override onlyGovernance {
-    _tornado.instance.poolData.poolFee = DataManager.updateSingleRegistryPoolFee(_tornado.addr, _tornado.instance);
+  function updateInstance(Tornado memory _tornado) external virtual override onlyGovernance {
+    _tornado.instance.poolData.poolFee = DataManager.updateSingleRegistryPoolFee(
+      _tornado.addr,
+      _tornado.instance,
+      dataForTWAPOracle
+    );
     getInstanceForPoolId.push(_tornado.addr);
     _updateInstance(_tornado);
   }
@@ -124,9 +128,13 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
    * @notice This function should update the fee of a specific pool
    * @param poolId id of the pool to update fees for
    */
-  function updateFeeOfPool(uint256 poolId) public { 
+  function updateFeeOfPool(uint256 poolId) public {
     ITornadoInstance instance = getInstanceForPoolId[poolId];
-    instances[instance].poolData.poolFee = DataManager.updateSingleRegistryPoolFee(instance, instances[instance]);
+    instances[instance].poolData.poolFee = DataManager.updateSingleRegistryPoolFee(
+      instance,
+      instances[instance],
+      dataForTWAPOracle
+    );
     emit FeeUpdated(block.timestamp, poolId);
   }
 }
