@@ -32,12 +32,13 @@ library UniswapV3OracleHelper {
     uint24 fee,
     uint32 period
   ) public view returns (uint256) {
-    if (baseToken == quoteToken) return 1 ether;
+    uint128 base = uint128(10)**uint128(IERC20Decimals(quoteToken).decimals());
+    if (baseToken == quoteToken) return base;
     else
       return
         OracleLibrary.getQuoteAtTick(
           OracleLibrary.consult(UniswapV3Factory.getPool(baseToken, quoteToken, fee), period),
-          uint128(10)**uint128(IERC20Decimals(quoteToken).decimals()),
+          base,
           baseToken,
           quoteToken
         );

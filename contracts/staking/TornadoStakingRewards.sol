@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "tornado-lottery-period/contracts/interfaces/ITornadoVault.sol";
@@ -23,7 +22,7 @@ interface ITornadoGovernance {
  * @dev CONTRACT RISKS:
  *      - Relayer staked TORN at risk if contract is compromised.
  * */
-contract TornadoStakingRewards is ReentrancyGuard {
+contract TornadoStakingRewards {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
@@ -74,10 +73,9 @@ contract TornadoStakingRewards is ReentrancyGuard {
    *      We know that rewards are going to be updated every time someone locks or unlocks
    *      so we know that this function can't be used to falsely increase the amount of
    *      lockedTorn by locking in governance and subsequently calling it.
-   *      - nonReentrant as a safety measure
    *      - set rewards to 0 greedily
    */
-  function getReward() external nonReentrant {
+  function getReward() external {
     uint256 rewards = _updateReward(msg.sender, Governance.lockedBalance(msg.sender));
     rewards = rewards.add(accumulatedRewards[msg.sender]);
     accumulatedRewards[msg.sender] = 0;
@@ -112,8 +110,9 @@ contract TornadoStakingRewards is ReentrancyGuard {
   /**
    * @notice This function should allow governance rescue tokens from the staking rewards contract
    * */
-  function rescueTokens() external onlyGovernance {
-    torn.safeTransfer(address(Governance), torn.balanceOf(address(this)));
+  function rescueTokens(uint256 amount) external onlyGovernance {
+    if (amount == type(uint256).max) amount = torn.balanceOf(address(this));
+    torn.safeTransfer(address(Governance), amount);
   }
 
   /**
@@ -127,9 +126,10 @@ contract TornadoStakingRewards is ReentrancyGuard {
    * @return claimed the rewards attributed to user since the last update
    */
   function _updateReward(address account, uint256 amountLockedBeforehand) private returns (uint256 claimed) {
-    claimed = (accumulatedRewardPerTorn.sub(accumulatedRewardRateOnLastUpdate[account])).mul(amountLockedBeforehand).div(
-      ratioConstant
-    );
+    if (claimed != 0)
+      claimed = (accumulatedRewardPerTorn.sub(accumulatedRewardRateOnLastUpdate[account])).mul(amountLockedBeforehand).div(
+        ratioConstant
+      );
     accumulatedRewardRateOnLastUpdate[account] = accumulatedRewardPerTorn;
     emit RewardsUpdated(account, claimed);
   }

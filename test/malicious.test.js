@@ -450,6 +450,39 @@ describe('Malicious tests', () => {
         expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(initialShareValue)
       })
     })
+
+    describe('Update rewards downgrades', () => {
+      it('Should nullify balance of a relayer', async () => {
+        const registry = await RelayerRegistry.connect(impGov)
+        await registry.nullifyBalance(relayers[1].address)
+        expect(await registry.getRelayerBalance(relayers[1].address)).to.equal(0)
+      })
+
+      it('Should not break logic by setting accumulated reward to 0, but let it revert and downgrade', async () => {
+        const snapshotId = await sendr('evm_snapshot', [])
+
+        await StakingContract.getReward()
+
+        await sendr('hardhat_setStorageAt', [
+          StakingContract.address,
+          '0x0',
+          '0x0000000000000000000000000000000000000000000000000000000000000000',
+        ])
+        expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(0)
+
+        await expect(StakingContract.getReward()).to.be.reverted
+
+        await expect(() => Governance.unlock(ethers.utils.parseEther('5'))).to.changeTokenBalance(
+          await getToken(torn),
+          signerArray[0],
+          ethers.utils.parseEther('5'),
+        )
+
+        await expect(StakingContract.getReward()).to.be.reverted
+
+        await sendr('evm_revert', [snapshotId])
+      })
+    })
   })
 
   after(async function () {

@@ -761,6 +761,37 @@ describe('General functionality tests', () => {
           expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
         }
       })
+
+      it('Governance should be able to save some tokens', async () => {
+        let snapshot = await sendr('evm_snapshot', [])
+
+        const hundred = ethers.utils.parseEther('100')
+        const tornToken = (await getToken(torn)).connect(tornWhale)
+        await tornToken.transfer(StakingContract.address, hundred)
+
+        // gov to rescue
+        const staking = await StakingContract.connect(impGov)
+        await expect(() => staking.rescueTokens(hundred)).to.changeTokenBalance(
+          await getToken(torn),
+          Governance,
+          hundred,
+        )
+
+        await sendr('evm_revert', [snapshot])
+        snapshot = await sendr('evm_snapshot', [])
+
+        await tornToken.transfer(StakingContract.address, hundred)
+
+        const initialBalance = await tornToken.balanceOf(StakingContract.address)
+
+        await expect(() => staking.rescueTokens(ethers.constants.MaxUint256)).to.changeTokenBalance(
+          await getToken(torn),
+          Governance,
+          initialBalance,
+        )
+
+        await sendr('evm_revert', [snapshot])
+      })
     })
   })
 

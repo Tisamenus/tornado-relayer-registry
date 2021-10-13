@@ -92,7 +92,7 @@ contract RelayerRegistryData {
    * @return fee for the pool
    * */
   function getFeeForPoolId(uint256 poolId) public view returns (uint256) {
-    return getPoolDataForInstance[getInstanceForPoolId[poolId]].protocolPoolFee;
+    return getFeeForPool(getInstanceForPoolId[poolId]);
   }
 
   /**
