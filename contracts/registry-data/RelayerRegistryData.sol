@@ -10,12 +10,12 @@ import { ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProx
 /// @notice Contract which holds important data related to each tornado instance
 contract RelayerRegistryData {
   address public immutable governance;
-  RegistryDataManager public immutable DataManager;
 
   mapping(ITornadoInstance => PoolData) public getPoolDataForInstance;
   ITornadoInstance[] public getInstanceForPoolId;
 
   GlobalPoolData public dataForTWAPOracle;
+  RegistryDataManager public DataManager;
 
   address public registry;
 
@@ -44,11 +44,11 @@ contract RelayerRegistryData {
   }
 
   modifier onlyRelayerRegistry() {
-    require(msg.sender == registry, "only governance");
+    require(msg.sender == registry, "only registry");
     _;
   }
 
-  function registerRegistry(address registryAddress) external onlyGovernance {
+  function registerRelayerRegistry(address registryAddress) external onlyGovernance {
     registry = registryAddress;
   }
 

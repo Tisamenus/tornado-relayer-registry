@@ -74,6 +74,8 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     RegistryDataManager DataManager = RegistryData.DataManager();
 
+    RegistryData.registerRelayerRegistry(address(Registry));
+
     DataManager.initialize(newTornadoProxy);
 
     Staking.registerRelayerRegistry(address(Registry));
