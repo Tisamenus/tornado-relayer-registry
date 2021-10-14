@@ -61,7 +61,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
       _tornado.instance,
       dataForTWAPOracle
     );
-    getInstanceForPoolId.push(_tornado.addr);
+    if (instances[_tornado.addr].poolData.uniPoolFee == 0) getInstanceForPoolId.push(_tornado.addr);
     _updateInstance(_tornado);
   }
 

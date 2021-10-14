@@ -31,9 +31,6 @@ describe('Malicious tests', () => {
   let DataManagerFactory
   let DataManagerProxy
 
-  let RegistryDataFactory
-  let RegistryData
-
   let RelayerRegistry
   let RelayerRegistryImplementation
   let RegistryFactory
@@ -118,17 +115,6 @@ describe('Malicious tests', () => {
 
     ////////////////////////
 
-    RegistryDataFactory = await ethers.getContractFactory('RelayerRegistryData')
-
-    RegistryData = await RegistryDataFactory.deploy(
-      DataManagerProxy.address,
-      RelayerRegistry.address,
-      governance,
-      tornadoPools,
-      uniswapPoolFees,
-      feesArray,
-    )
-
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
     MockVault = await MockVaultFactory.deploy()
 
@@ -136,10 +122,15 @@ describe('Malicious tests', () => {
     StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
 
     for (let i = 0; i < tornadoPools.length; i++) {
+      const PoolData = {
+        uniPoolFee: uniswapPoolFees[i],
+        poolFee: feesArray[i],
+      }
       const Instance = {
         isERC20: i > 3,
         token: token_addresses[poolTokens[i]],
         state: 2,
+        poolData: PoolData,
       }
       const Tornado = {
         addr: tornadoPools[i],
@@ -152,9 +143,10 @@ describe('Malicious tests', () => {
 
     TornadoProxy = await TornadoProxyFactory.deploy(
       RelayerRegistry.address,
+      DataManagerProxy.address,
       tornadoTrees,
       governance,
-      TornadoInstances,
+      TornadoInstances.slice(0, TornadoInstances.length - 1),
     )
 
     await DataManagerProxy.initialize(TornadoProxy.address)
@@ -175,7 +167,6 @@ describe('Malicious tests', () => {
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
-      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
@@ -298,7 +289,7 @@ describe('Malicious tests', () => {
 
     describe('Check params for deployed contracts', () => {
       it('Should assert params are correct', async function () {
-        const globalData = await RegistryData.dataForTWAPOracle()
+        const globalData = await TornadoProxy.dataForTWAPOracle()
 
         expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
@@ -308,7 +299,7 @@ describe('Malicious tests', () => {
       })
 
       it('Should pass initial fee update', async () => {
-        await RegistryData.updateAllFees()
+        await TornadoProxy.updateAllFees()
       })
     })
 

@@ -33,9 +33,6 @@ describe('General functionality tests', () => {
   let DataManagerFactory
   let DataManagerProxy
 
-  let RegistryDataFactory
-  let RegistryData
-
   let RelayerRegistry
   let RelayerRegistryImplementation
   let RegistryFactory
@@ -125,17 +122,6 @@ describe('General functionality tests', () => {
 
     ////////////////////////
 
-    RegistryDataFactory = await ethers.getContractFactory('RelayerRegistryData')
-
-    RegistryData = await RegistryDataFactory.deploy(
-      DataManagerProxy.address,
-      RelayerRegistry.address,
-      governance,
-      tornadoPools,
-      uniswapPoolFees,
-      feesArray,
-    )
-
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
     MockVault = await MockVaultFactory.deploy()
 
@@ -143,10 +129,15 @@ describe('General functionality tests', () => {
     StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
 
     for (let i = 0; i < tornadoPools.length; i++) {
+      const PoolData = {
+        uniPoolFee: uniswapPoolFees[i],
+        poolFee: feesArray[i],
+      }
       const Instance = {
         isERC20: i > 3,
         token: token_addresses[poolTokens[i]],
         state: 2,
+        poolData: PoolData,
       }
       const Tornado = {
         addr: tornadoPools[i],
@@ -159,9 +150,10 @@ describe('General functionality tests', () => {
 
     TornadoProxy = await TornadoProxyFactory.deploy(
       RelayerRegistry.address,
+      DataManagerProxy.address,
       tornadoTrees,
       governance,
-      TornadoInstances,
+      TornadoInstances.slice(0, TornadoInstances.length - 1),
     )
 
     await DataManagerProxy.initialize(TornadoProxy.address)
@@ -182,7 +174,6 @@ describe('General functionality tests', () => {
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
-      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
@@ -305,7 +296,7 @@ describe('General functionality tests', () => {
 
     describe('Check params for deployed contracts', () => {
       it('Should assert params are correct', async function () {
-        const globalData = await RegistryData.dataForTWAPOracle()
+        const globalData = await TornadoProxy.dataForTWAPOracle()
 
         expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
@@ -315,11 +306,11 @@ describe('General functionality tests', () => {
       })
 
       it('Should pass initial fee update', async () => {
-        await RegistryData.updateAllFees()
-        for (let i = 0; i < tornadoPools.length; i++) {
+        await TornadoProxy.updateAllFees()
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
           console.log(
             `${poolTokens[i]}-${denominations[i]}-pool fee: `,
-            (await RegistryData.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+            (await TornadoProxy.getFeeForPoolId(i)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
               1000000,
             'torn',
           )
@@ -327,18 +318,18 @@ describe('General functionality tests', () => {
       })
 
       it('Should repeatedly update fees and assure none return 0', async () => {
-        for (let i = 0; i < tornadoPools.length; i++) {
-          await RegistryData.updateAllFees()
-          for (let j = 0; j < tornadoPools.length; j++) {
-            expect(await RegistryData.getFeeForPoolId(j)).to.be.gt(0)
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
+          await TornadoProxy.updateAllFees()
+          for (let j = 0; j < tornadoPools.length - 1; j++) {
+            expect(await TornadoProxy.getFeeForPoolId(j)).to.be.gt(0)
           }
         }
       })
 
       it('Should test repeatedly updating fees of specific pool and assure none return 0', async () => {
-        for (let i = 0; i < tornadoPools.length; i++) {
-          await RegistryData.updateFeeOfPool(i)
-          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
+          await TornadoProxy.updateFeeOfPool(i)
+          expect(await TornadoProxy.getFeeForPoolId(i)).to.be.gt(0)
         }
       })
 
@@ -346,60 +337,42 @@ describe('General functionality tests', () => {
         let poolIdsAll = []
         let poolIdsSome = []
 
-        for (let i = 0; i < tornadoPools.length; i++) {
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
           poolIdsAll.push(i)
           if (i % 2) poolIdsSome.push(i)
         }
 
-        await RegistryData.updateFeesOfPools(poolIdsAll)
+        await TornadoProxy.updateFeesOfPools(poolIdsAll)
 
-        for (let i = 0; i < tornadoPools.length; i++) {
-          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
+          expect(await TornadoProxy.getFeeForPoolId(i)).to.be.gt(0)
         }
 
-        await RegistryData.updateFeesOfPools(poolIdsSome)
+        await TornadoProxy.updateFeesOfPools(poolIdsSome)
 
-        for (let i = 0; i < tornadoPools.length; i++) {
-          expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
+          expect(await TornadoProxy.getFeeForPoolId(i)).to.be.gt(0)
         }
       })
 
       it('Should be able to add a pool and update its fees and print', async () => {
-        const datagov = await RegistryData.connect(impGov)
         const proxygov = await TornadoProxy.connect(impGov)
         let index = tornadoPools.length - 1
 
-        await proxygov.addInstance(10000, TornadoInstances[index])
-        index++
-        await datagov.updateFeeOfPool(index)
-        index--
+        let newInstance = TornadoInstances[index]
+
+        await proxygov.updateInstance(newInstance)
+
+        await proxygov.updateFeeOfPool(index)
 
         console.log(
           `${poolTokens[index]}-${denominations[index]}-pool fee:`,
-          (await RegistryData.getFeeForPoolId(index)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+          (await TornadoProxy.getFeeForPoolId(index)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
             1000000,
           'torn',
         )
 
-        await datagov.updateAllFees()
-      })
-
-      it('Should be able to add an ether pool and update its fees and print', async () => {
-        const datagov = await RegistryData.connect(impGov)
-        const proxygov = await TornadoProxy.connect(impGov)
-
-        await proxygov.addInstance(10000, TornadoInstances[0])
-        await datagov.updateFeeOfPool(tornadoPools.length + 1)
-
-        console.log(
-          `${poolTokens[0]}-${denominations[0]}-pool fee:`,
-          (await RegistryData.getFeeForPoolId(tornadoPools.length + 1))
-            .div(ethers.utils.parseUnits('1', 'szabo'))
-            .toNumber() / 1000000,
-          'torn',
-        )
-
-        await datagov.updateAllFees()
+        await proxygov.updateAllFees()
       })
     })
 

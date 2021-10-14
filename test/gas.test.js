@@ -7,13 +7,15 @@ const { BigNumber } = require('@ethersproject/bignumber')
 const { rbigint, createDeposit, toHex, generateProof, initialize } = require('tornado-cli')
 const MixerABI = require('tornado-cli/build/contracts/Mixer.abi.json')
 
-describe('Gas tests', () => {
+describe('Gas usage tests', () => {
   /// NAME HARDCODED
   let governance = mainnet.tornado_cash_addresses.governance
+  // const instancePath = 'tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol:ITornadoInstance'
 
   let tornadoPools = mainnet.project_specific.contract_construction.RelayerRegistryData.tornado_pools
   let uniswapPoolFees = mainnet.project_specific.contract_construction.RelayerRegistryData.uniswap_pool_fees
   let poolTokens = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_tokens
+  // let denominations = mainnet.project_specific.contract_construction.RelayerRegistryData.pool_denominations
   let feesArray = [
     100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
   ]
@@ -30,9 +32,6 @@ describe('Gas tests', () => {
   //// CONTRACTS / FACTORIES
   let DataManagerFactory
   let DataManagerProxy
-
-  let RegistryDataFactory
-  let RegistryData
 
   let RelayerRegistry
   let RelayerRegistryImplementation
@@ -64,6 +63,7 @@ describe('Gas tests', () => {
   let tornWhale
   let daiWhale
   let relayers = []
+  // let impGov
 
   //// NORMAL ACCOUNTS
   let signerArray
@@ -117,17 +117,6 @@ describe('Gas tests', () => {
 
     ////////////////////////
 
-    RegistryDataFactory = await ethers.getContractFactory('RelayerRegistryData')
-
-    RegistryData = await RegistryDataFactory.deploy(
-      DataManagerProxy.address,
-      RelayerRegistry.address,
-      governance,
-      tornadoPools,
-      uniswapPoolFees,
-      feesArray,
-    )
-
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
     MockVault = await MockVaultFactory.deploy()
 
@@ -135,10 +124,15 @@ describe('Gas tests', () => {
     StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
 
     for (let i = 0; i < tornadoPools.length; i++) {
+      const PoolData = {
+        uniPoolFee: uniswapPoolFees[i],
+        poolFee: feesArray[i],
+      }
       const Instance = {
         isERC20: i > 3,
         token: token_addresses[poolTokens[i]],
         state: 2,
+        poolData: PoolData,
       }
       const Tornado = {
         addr: tornadoPools[i],
@@ -151,9 +145,10 @@ describe('Gas tests', () => {
 
     TornadoProxy = await TornadoProxyFactory.deploy(
       RelayerRegistry.address,
+      DataManagerProxy.address,
       tornadoTrees,
       governance,
-      TornadoInstances,
+      TornadoInstances.slice(0, TornadoInstances.length - 1),
     )
 
     await DataManagerProxy.initialize(TornadoProxy.address)
@@ -174,7 +169,6 @@ describe('Gas tests', () => {
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
       RelayerRegistry.address,
-      RegistryData.address,
       tornadoProxy,
       TornadoProxy.address,
       StakingContract.address,
@@ -297,7 +291,7 @@ describe('Gas tests', () => {
 
     describe('Check params for deployed contracts', () => {
       it('Should assert params are correct', async function () {
-        const globalData = await RegistryData.dataForTWAPOracle()
+        const globalData = await TornadoProxy.dataForTWAPOracle()
 
         expect(globalData[0]).to.equal(ethers.utils.parseUnits('1000', 'szabo'))
         expect(globalData[1]).to.equal(ethers.utils.parseUnits('5400', 'wei'))
@@ -306,20 +300,20 @@ describe('Gas tests', () => {
       })
 
       it('Should pass initial fee update', async () => {
-        await RegistryData.updateAllFees()
+        await TornadoProxy.updateAllFees()
       })
 
       it('Should repeatedly update fees and assure none return 0', async () => {
         let gasUsedForUpdateFees = BigNumber.from(0)
 
-        for (let i = 0; i < tornadoPools.length; i++) {
-          const response = await RegistryData.updateAllFees()
+        for (let i = 0; i < tornadoPools.length - 1; i++) {
+          const response = await TornadoProxy.updateAllFees()
           const receipt = await response.wait()
 
           gasUsedForUpdateFees = gasUsedForUpdateFees.add(receipt.gasUsed)
 
-          for (let j = 0; j < tornadoPools.length; j++) {
-            expect(await RegistryData.getFeeForPoolId(i)).to.be.gt(0)
+          for (let j = 0; j < tornadoPools.length - 1; j++) {
+            expect(await TornadoProxy.getFeeForPoolId(i)).to.be.gt(0)
           }
         }
 
