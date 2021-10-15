@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import "./ModifiedTornadoProxy.sol";
 import "../registry-data/RegistryDataManager.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IRelayerRegistry {
   function burn(
@@ -16,7 +17,7 @@ interface IRelayerRegistry {
   function addPool(uint96 uniPoolFee, ITornadoInstance pool) external;
 }
 
-contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
+contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
   IRelayerRegistry public immutable Registry;
   RegistryDataManager public immutable DataManager;
 
@@ -50,7 +51,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy {
     address payable _relayer,
     uint256 _fee,
     uint256 _refund
-  ) public payable virtual override {
+  ) public payable virtual override nonReentrant {
     if (_relayer != address(0)) Registry.burn(msg.sender, _relayer, _tornado);
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }
