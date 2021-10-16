@@ -42,6 +42,10 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     }
   }
 
+  /// @notice function which should allow a user to withdraw from a tornado instance
+  /// @dev at 100 GWEI, the nonReentrant costs approximately 0.9$ extra in a transaction, but this is to stop
+  ///      somebody from calling burn repeatedly on a relayer
+  ///      - f arguments are the same as in base contract (non-modified and modified version)
   function withdraw(
     ITornadoInstance _tornado,
     bytes calldata _proof,
@@ -56,6 +60,9 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }
 
+  /// @notice updated "updateInstance" function, which should now update the pool fee when updating an instances data
+  /// @dev adds the instance when uniPoolFee == 0 because this is pool specific and first time assigned != 0 at first updat
+  ///      - call should also break because of update if fee is invalid
   function updateInstance(Tornado memory _tornado) external virtual override onlyGovernance {
     _tornado.instance.poolData.poolFee = DataManager.updateSingleRegistryPoolFee(
       _tornado.addr,
@@ -66,6 +73,9 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     _updateInstance(_tornado);
   }
 
+
+  /// @notice get erc20 tornado instance token
+  /// @param instance the interface (contract) key to the instance data
   function getPoolToken(ITornadoInstance instance) external view returns (address) {
     return address(instances[instance].token);
   }
