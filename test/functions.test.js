@@ -303,6 +303,12 @@ describe('General functionality tests', () => {
 
         expect(await RelayerRegistry.minStakeAmount()).to.equal(ethers.utils.parseEther('100'))
         expect(await TornadoProxy.Registry()).to.equal(RelayerRegistry.address)
+
+        for (let i = 0; i < TornadoInstances.length - 1; i++) {
+          expect(await TornadoProxy.getPoolToken(TornadoInstances[i].addr)).to.equal(
+            TornadoInstances[i].instance.token,
+          )
+        }
       })
 
       it('Should pass initial fee update', async () => {

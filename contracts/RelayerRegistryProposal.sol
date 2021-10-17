@@ -60,6 +60,8 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     Registry.initialize(GovernanceAddress, staking, address(tornToken));
 
+    disableOldProxy();
+
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(newTornadoProxy);
 
     Registry.registerProxy(newTornadoProxy);
@@ -70,8 +72,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     TornadoProxy.setPeriodForTWAPOracle(5400);
 
     Registry.setMinStakeAmount(100 ether);
-
-    disableOldProxy();
   }
 
   function disableOldProxy() private {

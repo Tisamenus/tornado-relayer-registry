@@ -463,11 +463,17 @@ describe('Malicious tests', () => {
 
         await expect(StakingContract.getReward()).to.be.reverted
 
-        await expect(() => Governance.unlock(ethers.utils.parseEther('5'))).to.changeTokenBalance(
+        await expect(() => Governance.unlock(ethers.utils.parseEther('2'))).to.changeTokenBalance(
           await getToken(torn),
           signerArray[0],
-          ethers.utils.parseEther('5'),
+          ethers.utils.parseEther('2'),
         )
+
+        const response = await Governance.unlock(ethers.utils.parseEther('3'))
+
+        const receipt = await response.wait()
+
+        console.log('Event triggered: ', receipt.events[0].event)
 
         await expect(StakingContract.getReward()).to.be.reverted
 
