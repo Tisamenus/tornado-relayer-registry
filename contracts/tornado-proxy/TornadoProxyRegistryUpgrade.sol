@@ -73,7 +73,6 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     _updateInstance(_tornado);
   }
 
-
   /// @notice get erc20 tornado instance token
   /// @param instance the interface (contract) key to the instance data
   function getPoolToken(ITornadoInstance instance) external view returns (address) {

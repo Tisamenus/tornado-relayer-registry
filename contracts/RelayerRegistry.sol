@@ -54,6 +54,7 @@ contract RelayerRegistry is Initializable {
   event WorkerUnregistered(address indexed worker);
   event StakeAddedToRelayer(address indexed relayer, uint256 indexed amountStakeAdded);
   event StakeBurned(address indexed relayer, uint256 indexed amountBurned);
+  event RewardsAddedByGovernance(uint256 indexed rewards);
   event NewMinimumStakeAmount(uint256 indexed minStakeAmount);
   event NewProxyRegistered(address indexed tornadoProxy);
   event NewRelayerRegistered(bytes32 relayer, address indexed relayerAddress, uint256 indexed stakedAmount);
@@ -180,6 +181,12 @@ contract RelayerRegistry is Initializable {
     getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
+  }
+
+  function addRewards(uint256 amount) external onlyGovernance {
+    torn.safeTransferFrom(msg.sender, address(Staking), amount);
+    Staking.addBurnRewards(amount);
+    emit RewardsAddedByGovernance(amount);
   }
 
   /**

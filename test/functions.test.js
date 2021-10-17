@@ -765,6 +765,27 @@ describe('General functionality tests', () => {
 
         await sendr('evm_revert', [snapshot])
       })
+
+      it('Governance should be able to add rewards', async () => {
+        const registry = await RelayerRegistry.connect(impGov)
+        const tornToken = (await getToken(torn)).connect(impGov)
+
+        await tornToken.approve(registry.address, ethers.utils.parseEther('100'))
+        await expect(() => registry.addRewards(ethers.utils.parseEther('100'))).to.changeTokenBalance(
+          tornToken,
+          StakingContract,
+          ethers.utils.parseEther('100'),
+        )
+      })
+
+      it('Should harvest those rewards again', async () => {
+        for (let i = 0; i < 3; i++) {
+          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
+          const staking = await StakingContract.connect(signerArray[i])
+          await staking.getReward()
+          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
+        }
+      })
     })
   })
 
