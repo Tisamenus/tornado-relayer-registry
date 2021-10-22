@@ -28,7 +28,7 @@ jobs:
       - run: yarn lint
       - run: yarn test:all
         env:
-          use_latest_block: true
+          use_latest_block: false
 
       - name: Generate coverage
         run: yarn coverage
