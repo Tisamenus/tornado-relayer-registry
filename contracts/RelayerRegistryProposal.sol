@@ -13,7 +13,6 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RegistryDataManager } from "./registry-data/RegistryDataManager.sol";
-import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
 import { TornadoProxyRegistryUpgrade } from "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
 
