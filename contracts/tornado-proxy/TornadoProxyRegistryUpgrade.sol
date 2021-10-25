@@ -113,6 +113,10 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     return instances[pool].poolData.poolFee;
   }
 
+  function getNumberOfInstances() public view returns (uint256) {
+    return getInstanceForPoolId.length;
+  }
+
   /**
    * @notice This function should update the fees of each pool
    */

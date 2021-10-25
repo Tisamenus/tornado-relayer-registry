@@ -51,9 +51,6 @@ describe('Malicious tests', () => {
 
   let Governance
 
-  let InstancesDataFactory
-  let InstancesData
-
   let GasCompensationFactory
   let GasCompensation
 
@@ -104,7 +101,6 @@ describe('Malicious tests', () => {
     ProxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
     //// READ IN
-
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
     MockVault = await MockVaultFactory.deploy()
 
@@ -232,24 +228,12 @@ describe('Malicious tests', () => {
     console.log('Exp. addr. DataManager: ', deploymentAddressManager)
     //////////////////////////////////////////////////////////////////////////////////////////
 
-    for (let i = 0; i < TornadoInstances.length; i++) {
-      TornadoInstances[i].instance.state = 0
-    }
-
-    InstancesDataFactory = await ethers.getContractFactory('TornadoInstancesData')
-    InstancesData = await InstancesDataFactory.deploy(TornadoInstances)
-
     GasCompensationFactory = await ethers.getContractFactory('GasCompensationVault')
     GasCompensation = await GasCompensationFactory.deploy()
 
     ////////////// PROPOSAL OPTION 1
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
-    Proposal = await ProposalFactory.deploy(
-      tornadoProxy,
-      InstancesData.address,
-      GasCompensation.address,
-      MockVault.address,
-    )
+    Proposal = await ProposalFactory.deploy(tornadoProxy, GasCompensation.address, MockVault.address)
 
     Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)
   })

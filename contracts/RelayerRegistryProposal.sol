@@ -17,7 +17,7 @@ import { TornadoInstancesData } from "./tornado-proxy/TornadoInstancesData.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
 import { TornadoProxyRegistryUpgrade } from "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
 
-import { TornadoProxy } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
+import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
 import { TornadoTrees } from "tornado-trees/contracts/TornadoTrees.sol";
 
@@ -29,26 +29,21 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0x7c60281516215A366194608C8bC5186c13Cfc9Ce;
-  address public constant expectedStaking = 0x1907232F0462353cc2296d665454723ff2944C59;
-  RelayerRegistry public constant Registry = RelayerRegistry(0x8cF67c498906c85DC52AcAAD926638552463D918);
+  address public constant expectedNewTornadoProxy = 0x33335685BFe550E9C74cbD755FbFf19693BEadb1;
+  address public constant expectedStaking = 0xb46563836ccB8b866FC5d80db81Da6B1B0C5c327;
+  RelayerRegistry public constant Registry = RelayerRegistry(0x01c843f88556Ef5A7073b423D0ac653A2486d485);
 
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
-
-  TornadoInstancesData public immutable InstancesData;
-
   address public immutable oldTornadoProxy;
   address public immutable gasCompLogic;
   address public immutable tornadoVault;
 
   constructor(
     address oldTornadoProxyAddress,
-    address tornadoInstancesDataAddress,
     address gasCompLogicAddress,
     address vaultAddress
   ) public {
     oldTornadoProxy = oldTornadoProxyAddress;
-    InstancesData = TornadoInstancesData(tornadoInstancesDataAddress);
     gasCompLogic = gasCompLogicAddress;
     tornadoVault = vaultAddress;
   }
@@ -64,13 +59,13 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     Registry.initialize(GovernanceAddress, expectedStaking, address(tornToken));
 
-    disableOldProxy();
-
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(expectedNewTornadoProxy);
 
     Registry.registerProxy(expectedNewTornadoProxy);
 
     TornadoProxyRegistryUpgrade TornadoProxy = TornadoProxyRegistryUpgrade(expectedNewTornadoProxy);
+
+    disableOldProxy(TornadoProxy);
 
     (TornadoProxy.DataManager()).initialize(address(TornadoProxy));
 
@@ -80,13 +75,22 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     Registry.setMinStakeAmount(100 ether);
   }
 
-  function disableOldProxy() private {
+  function disableOldProxy(TornadoProxyRegistryUpgrade NewTornadoProxy) private {
     TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
 
-    TornadoProxy.Tornado[] memory Instances = InstancesData.getInstances();
+    TornadoProxy.Tornado memory currentTornado;
+    ITornadoInstance currentInstance;
+    uint256 bound = NewTornadoProxy.getNumberOfInstances();
 
-    for (uint256 i = 0; i < Instances.length; i++) {
-      oldProxy.updateInstance(Instances[i]);
+    for (uint256 i = 0; i < bound; i++) {
+      currentInstance = NewTornadoProxy.getInstanceForPoolId(i);
+      (bool isERC20, IERC20 token, ) = oldProxy.instances(currentInstance);
+      currentTornado = TornadoProxy.Tornado(
+        currentInstance,
+        TornadoProxy.Instance(isERC20, token, TornadoProxy.InstanceState.DISABLED)
+      );
+
+      oldProxy.updateInstance(currentTornado);
     }
   }
 }
