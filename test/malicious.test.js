@@ -1,4 +1,4 @@
-const { ethers, upgrades } = require('hardhat')
+const { ethers } = require('hardhat')
 const { expect } = require('chai')
 const { mainnet } = require('./tests.data.json')
 const { token_addresses } = mainnet
@@ -18,18 +18,24 @@ describe('Malicious tests', () => {
     100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
   ]
 
+  let salt = '0x746f726e61646f00000000000000000000000000000000000000000000000000' //  "tornado"
+  let singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
+
   let tornadoTrees = mainnet.tornado_cash_addresses.trees
   let tornadoProxy = mainnet.tornado_cash_addresses.tornado_proxy
 
   let approxVaultBalance = ethers.utils.parseUnits('13893131191552333230524', 'wei')
 
-  //// LIBRARIES
-  let OracleHelperLibrary
-  let OracleHelperFactory
-
   //// CONTRACTS / FACTORIES
+  let SingletonFactory
+  let Create2ComputerFactory
+  let Create2Computer
+
+  let ProxyFactory
+
   let DataManagerFactory
   let DataManagerProxy
+  let DataManager
 
   let RelayerRegistry
   let RelayerRegistryImplementation
@@ -88,38 +94,21 @@ describe('Malicious tests', () => {
   before(async function () {
     signerArray = await ethers.getSigners()
 
-    OracleHelperFactory = await ethers.getContractFactory('UniswapV3OracleHelper')
-    OracleHelperLibrary = await OracleHelperFactory.deploy()
+    /// CREATE2 CONTRACTS
+    SingletonFactory = await ethers.getContractAt('SingletonFactory', singletonFactoryAddress)
+    Create2ComputerFactory = await ethers.getContractFactory('Create2Computer')
+    Create2Computer = await Create2ComputerFactory.deploy()
 
     //// PROXY DEPLOYMENTS
+    DataManagerFactory = await ethers.getContractFactory('RegistryDataManager')
+    ProxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
-    DataManagerFactory = await ethers.getContractFactory('RegistryDataManager', {
-      libraries: {
-        UniswapV3OracleHelper: OracleHelperLibrary.address,
-      },
-    })
-
-    DataManagerProxy = await upgrades.deployProxy(DataManagerFactory, {
-      unsafeAllow: ['external-library-linking'],
-      initializer: false,
-    })
-
-    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
-    RelayerRegistryImplementation = await RegistryFactory.deploy()
-
-    const proxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
-
-    RelayerRegistry = await proxyFactory.deploy(RelayerRegistryImplementation.address, governance, [])
-
-    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', RelayerRegistry.address)
-
-    ////////////////////////
+    //// READ IN
 
     MockVaultFactory = await ethers.getContractFactory('TornadoVault')
     MockVault = await MockVaultFactory.deploy()
 
-    StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
-    StakingContract = await StakingFactory.deploy(governance, RelayerRegistry.address, torn)
+    //// POOL DATA
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const PoolData = {
@@ -139,19 +128,109 @@ describe('Malicious tests', () => {
       TornadoInstances[i] = Tornado
     }
 
-    TornadoProxyFactory = await ethers.getContractFactory('TornadoProxyRegistryUpgrade')
-
-    TornadoProxy = await TornadoProxyFactory.deploy(
-      RelayerRegistry.address,
-      DataManagerProxy.address,
-      tornadoTrees,
-      governance,
-      TornadoInstances.slice(0, TornadoInstances.length - 1),
+    ///// CREATE2 BLOCK /////////////////////////////////////////////////////////////////////////
+    /////////////// DATA MANAGER
+    await SingletonFactory.deploy(DataManagerFactory.bytecode, salt)
+    const deploymentAddressManager = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(DataManagerFactory.bytecode),
+      SingletonFactory.address,
     )
 
-    await DataManagerProxy.initialize(TornadoProxy.address)
+    DataManager = await ethers.getContractAt('RegistryDataManager', deploymentAddressManager)
 
-    await upgrades.admin.changeProxyAdmin(DataManagerProxy.address, governance)
+    /////////////// DATA MANAGER PROXY
+    const proxyDeploymentBytecode =
+      ProxyFactory.bytecode +
+      ProxyFactory.interface.encodeDeploy([DataManager.address, governance, []]).slice(2)
+
+    await SingletonFactory.deploy(proxyDeploymentBytecode, salt)
+
+    const deploymentAddressManagerProxy = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(proxyDeploymentBytecode),
+      SingletonFactory.address,
+    )
+
+    DataManagerProxy = await ethers.getContractAt('RegistryDataManager', deploymentAddressManagerProxy)
+
+    /////////////// RELAYER REGISTRY
+    RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
+    await SingletonFactory.deploy(RegistryFactory.bytecode, salt)
+
+    const deploymentAddressRegistry = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(RegistryFactory.bytecode),
+      SingletonFactory.address,
+    )
+    RelayerRegistryImplementation = await ethers.getContractAt('RelayerRegistry', deploymentAddressRegistry)
+
+    /////////////// RELAYER REGISTRY PROXY
+
+    const registryProxyDeploymentBytecode =
+      ProxyFactory.bytecode +
+      ProxyFactory.interface.encodeDeploy([RelayerRegistryImplementation.address, governance, []]).slice(2)
+
+    await SingletonFactory.deploy(registryProxyDeploymentBytecode, salt)
+
+    const deploymentAddressRegistryProxy = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(registryProxyDeploymentBytecode),
+      SingletonFactory.address,
+    )
+
+    RelayerRegistry = await ethers.getContractAt('RelayerRegistry', deploymentAddressRegistryProxy)
+
+    /////////////// STAKING
+
+    StakingFactory = await ethers.getContractFactory('TornadoStakingRewards')
+
+    const deploymentBytecodeStaking =
+      StakingFactory.bytecode +
+      StakingFactory.interface.encodeDeploy([governance, RelayerRegistry.address, torn]).slice(2)
+
+    await SingletonFactory.deploy(deploymentBytecodeStaking, salt)
+
+    const deploymentAddressStaking = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(deploymentBytecodeStaking),
+      SingletonFactory.address,
+    )
+
+    StakingContract = await ethers.getContractAt('TornadoStakingRewards', deploymentAddressStaking)
+
+    /////////////// TORNADO PROXY
+    TornadoProxyFactory = await ethers.getContractFactory('TornadoProxyRegistryUpgrade')
+
+    const deploymentBytecodeTornadoProxy =
+      TornadoProxyFactory.bytecode +
+      TornadoProxyFactory.interface
+        .encodeDeploy([
+          RelayerRegistry.address,
+          DataManagerProxy.address,
+          tornadoTrees,
+          governance,
+          TornadoInstances.slice(0, TornadoInstances.length - 1),
+        ])
+        .slice(2)
+
+    await SingletonFactory.deploy(deploymentBytecodeTornadoProxy, salt)
+
+    const deploymentAddressTornadoProxy = await Create2Computer.computeAddress(
+      salt,
+      ethers.utils.keccak256(deploymentBytecodeTornadoProxy),
+      SingletonFactory.address,
+    )
+
+    TornadoProxy = await ethers.getContractAt('TornadoProxyRegistryUpgrade', deploymentAddressTornadoProxy)
+
+    console.log('Exp. addr. TornadoProxy: ', deploymentAddressTornadoProxy)
+    console.log('Exp. addr. Staking: ', deploymentAddressStaking)
+    console.log('Exp. addr. RegistryProxy: ', deploymentAddressRegistryProxy)
+    console.log('Exp. addr. RelayerRegistry: ', deploymentAddressRegistry)
+    console.log('Exp. addr. ManagerProxy: ', deploymentAddressManagerProxy)
+    console.log('Exp. addr. DataManager: ', deploymentAddressManager)
+    //////////////////////////////////////////////////////////////////////////////////////////
 
     for (let i = 0; i < TornadoInstances.length; i++) {
       TornadoInstances[i].instance.state = 0
@@ -166,10 +245,7 @@ describe('Malicious tests', () => {
     ////////////// PROPOSAL OPTION 1
     ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
     Proposal = await ProposalFactory.deploy(
-      RelayerRegistry.address,
       tornadoProxy,
-      TornadoProxy.address,
-      StakingContract.address,
       InstancesData.address,
       GasCompensation.address,
       MockVault.address,

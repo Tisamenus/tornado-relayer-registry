@@ -13,8 +13,8 @@ interface IERC20Decimals {
 library UniswapV3OracleHelper {
   using LowGasSafeMath for uint256;
 
-  IUniswapV3Factory public constant UniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  IUniswapV3Factory internal constant UniswapV3Factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+  address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
   /**
    * @notice This function should return the price of baseToken in quoteToken, as in: quote/base (WETH/TORN)
@@ -31,7 +31,7 @@ library UniswapV3OracleHelper {
     address quoteToken,
     uint24 fee,
     uint32 period
-  ) public view returns (uint256) {
+  ) internal view returns (uint256) {
     uint128 base = uint128(10)**uint128(IERC20Decimals(quoteToken).decimals());
     if (baseToken == quoteToken) return base;
     else
@@ -56,7 +56,7 @@ library UniswapV3OracleHelper {
     address token,
     uint24 fee,
     uint32 period
-  ) public view returns (uint256) {
+  ) internal view returns (uint256) {
     return getPriceOfTokenInToken(token, WETH, fee, period);
   }
 
@@ -72,7 +72,7 @@ library UniswapV3OracleHelper {
     address token,
     uint24 fee,
     uint32 period
-  ) public view returns (uint256) {
+  ) internal view returns (uint256) {
     return getPriceOfTokenInToken(WETH, token, fee, period);
   }
 
@@ -88,7 +88,7 @@ library UniswapV3OracleHelper {
     address[2] memory tokens,
     uint24[2] memory fees,
     uint32 period
-  ) public view returns (uint256) {
+  ) internal view returns (uint256) {
     return getPriceOfTokenInWETH(tokens[0], fees[0], period).mul(1e18) / getPriceOfTokenInWETH(tokens[1], fees[1], period);
   }
 }
