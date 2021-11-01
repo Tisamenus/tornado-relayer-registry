@@ -27,9 +27,9 @@ contract MockProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0xc183a81e5FAa118c9b44ceD454851D766a0E4213;
-  address public constant expectedStaking = 0x6f17A158e44a218d0BFE31bAa2939CE848532ddd;
-  RelayerRegistry public constant Registry = RelayerRegistry(0xfA013559dE545217A4d72Ad6269D955DB64ECca1);
+  address public constant expectedNewTornadoProxy = 0x0D0282adE951426E7CC05e7108f19b715204ab87;
+  address public constant expectedStaking = 0x87Cd284F7bBC97433c7353d003243ff0867D5c8D;
+  RelayerRegistry public constant Registry = RelayerRegistry(0x001DbDeAE8974721B1E6A0345BeC9E8051e5cDc9);
 
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
   address public immutable oldTornadoProxy;

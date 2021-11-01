@@ -15,11 +15,18 @@ interface ITornadoProxy {
   function getPoolToken(ITornadoInstance instance) external view returns (address);
 }
 
+/// @dev data attributed to a single tornado pool, which is not already stored
+///      in the tornado proxy. uniswapPoolSwappingFee is the fee of the uniswap pool
+///      which will be used to get a TWAP, and tornFeeOfPool is the fee relayers have to pay
+///      when withdrawing for someone from the pool
 struct PoolData {
   uint96 uniswapPoolSwappingFee;
   uint160 tornFeeOfPool;
 }
 
+/// @dev data attributed to all tornado pools, proxyFee is the fee constant used to
+///      calculate tornFeeOfPool for each pool and uniswapTimePeriod is the lookback
+///      in seconds for each pool (for simplicity)
 struct ProxyPoolParameters {
   uint128 proxyFee;
   uint128 uniswapTimePeriod;
