@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoTrees.sol";
-import "../registry-data/RegistryDataManager.sol";
+import "../registry-data/PoolFeeCalculator.sol";
 
 contract ModifiedTornadoProxy {
   using SafeERC20 for IERC20;

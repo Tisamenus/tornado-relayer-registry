@@ -3,23 +3,23 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { ImmutableGovernanceInformation } from "../submodules/tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
+import { ImmutableGovernanceInformation } from "../../submodules/tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { LoopbackProxy } from "tornado-governance/contracts/LoopbackProxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
-import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
-import { RelayerRegistry } from "./RelayerRegistry.sol";
-import { TornadoProxyRegistryUpgrade } from "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
+import { GovernanceStakingUpgrade } from "../governance-upgrade/GovernanceStakingUpgrade.sol";
+import { TornadoStakingRewards } from "../staking/TornadoStakingRewards.sol";
+import { RelayerRegistry } from "../RelayerRegistry.sol";
+import { TornadoProxyRegistryUpgrade } from "../tornado-proxy/TornadoProxyRegistryUpgrade.sol";
 
 import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
 import { TornadoTrees } from "tornado-trees/contracts/TornadoTrees.sol";
 
-contract RelayerRegistryProposal is ImmutableGovernanceInformation {
+contract MockProposal is ImmutableGovernanceInformation {
   using SafeMath for uint256;
   using Address for address;
 
@@ -27,9 +27,9 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0xc11Cdd2ea656Aece0ba30CD43cd53AE4427e7918;
-  address public constant expectedStaking = 0x29A43297573B9eea8af735E504FD7F63ab381479;
-  RelayerRegistry public constant Registry = RelayerRegistry(0x8A7379E60912d98e8e0d78617fBED24E1C87ECD3);
+  address public constant expectedNewTornadoProxy = 0xc183a81e5FAa118c9b44ceD454851D766a0E4213;
+  address public constant expectedStaking = 0x6f17A158e44a218d0BFE31bAa2939CE848532ddd;
+  RelayerRegistry public constant Registry = RelayerRegistry(0xfA013559dE545217A4d72Ad6269D955DB64ECca1);
 
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
   address public immutable oldTornadoProxy;

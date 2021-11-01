@@ -33,9 +33,9 @@ describe('Gas tests', () => {
 
   let ProxyFactory
 
-  let DataManagerFactory
-  let DataManagerProxy
-  let DataManager
+  let FeeCalculatorFactory
+  let FeeCalculatorProxy
+  let FeeCalculator
 
   let RelayerRegistry
   let RelayerRegistryImplementation
@@ -96,7 +96,7 @@ describe('Gas tests', () => {
     Create2Computer = await Create2ComputerFactory.deploy()
 
     //// PROXY DEPLOYMENTS
-    DataManagerFactory = await ethers.getContractFactory('RegistryDataManager')
+    FeeCalculatorFactory = await ethers.getContractFactory('PoolFeeCalculator')
     ProxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
     //// READ IN
@@ -107,8 +107,8 @@ describe('Gas tests', () => {
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const PoolData = {
-        uniPoolFee: uniswapPoolFees[i],
-        poolFee: feesArray[i],
+        uniswapPoolSwappingFee: uniswapPoolFees[i],
+        tornFeeOfPool: feesArray[i],
       }
       const Instance = {
         isERC20: i > 3,
@@ -125,19 +125,19 @@ describe('Gas tests', () => {
 
     ///// CREATE2 BLOCK /////////////////////////////////////////////////////////////////////////
     /////////////// DATA MANAGER
-    await SingletonFactory.deploy(DataManagerFactory.bytecode, salt)
+    await SingletonFactory.deploy(FeeCalculatorFactory.bytecode, salt)
     const deploymentAddressManager = await Create2Computer.computeAddress(
       salt,
-      ethers.utils.keccak256(DataManagerFactory.bytecode),
+      ethers.utils.keccak256(FeeCalculatorFactory.bytecode),
       SingletonFactory.address,
     )
 
-    DataManager = await ethers.getContractAt('RegistryDataManager', deploymentAddressManager)
+    FeeCalculator = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManager)
 
     /////////////// DATA MANAGER PROXY
     const proxyDeploymentBytecode =
       ProxyFactory.bytecode +
-      ProxyFactory.interface.encodeDeploy([DataManager.address, governance, []]).slice(2)
+      ProxyFactory.interface.encodeDeploy([FeeCalculator.address, governance, []]).slice(2)
 
     await SingletonFactory.deploy(proxyDeploymentBytecode, salt)
 
@@ -147,7 +147,7 @@ describe('Gas tests', () => {
       SingletonFactory.address,
     )
 
-    DataManagerProxy = await ethers.getContractAt('RegistryDataManager', deploymentAddressManagerProxy)
+    FeeCalculatorProxy = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManagerProxy)
 
     /////////////// RELAYER REGISTRY
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
@@ -202,7 +202,7 @@ describe('Gas tests', () => {
       TornadoProxyFactory.interface
         .encodeDeploy([
           RelayerRegistry.address,
-          DataManagerProxy.address,
+          FeeCalculatorProxy.address,
           tornadoTrees,
           governance,
           TornadoInstances.slice(0, TornadoInstances.length - 1),
@@ -224,14 +224,16 @@ describe('Gas tests', () => {
     console.log('Exp. addr. RegistryProxy: ', deploymentAddressRegistryProxy)
     console.log('Exp. addr. RelayerRegistry: ', deploymentAddressRegistry)
     console.log('Exp. addr. ManagerProxy: ', deploymentAddressManagerProxy)
-    console.log('Exp. addr. DataManager: ', deploymentAddressManager)
+    console.log('Exp. addr. FeeCalculator: ', deploymentAddressManager)
     //////////////////////////////////////////////////////////////////////////////////////////
 
     GasCompensationFactory = await ethers.getContractFactory('GasCompensationVault')
     GasCompensation = await GasCompensationFactory.deploy()
 
     ////////////// PROPOSAL OPTION 1
-    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
+    ProposalFactory = await ethers.getContractFactory(
+      process.env.use_mock_proposal == 'true' ? 'MockProposal' : 'RelayerRegistryProposal',
+    )
     Proposal = await ProposalFactory.deploy(tornadoProxy, GasCompensation.address, MockVault.address)
 
     Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)

@@ -35,9 +35,9 @@ describe('General functionality tests', () => {
 
   let ProxyFactory
 
-  let DataManagerFactory
-  let DataManagerProxy
-  let DataManager
+  let FeeCalculatorFactory
+  let FeeCalculatorProxy
+  let FeeCalculator
 
   let RelayerRegistry
   let RelayerRegistryImplementation
@@ -104,7 +104,7 @@ describe('General functionality tests', () => {
     Create2Computer = await Create2ComputerFactory.deploy()
 
     //// PROXY DEPLOYMENTS
-    DataManagerFactory = await ethers.getContractFactory('RegistryDataManager')
+    FeeCalculatorFactory = await ethers.getContractFactory('PoolFeeCalculator')
     ProxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
     //// READ IN
@@ -115,8 +115,8 @@ describe('General functionality tests', () => {
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const PoolData = {
-        uniPoolFee: uniswapPoolFees[i],
-        poolFee: feesArray[i],
+        uniswapPoolSwappingFee: uniswapPoolFees[i],
+        tornFeeOfPool: feesArray[i],
       }
       const Instance = {
         isERC20: i > 3,
@@ -133,19 +133,19 @@ describe('General functionality tests', () => {
 
     ///// CREATE2 BLOCK /////////////////////////////////////////////////////////////////////////
     /////////////// DATA MANAGER
-    await SingletonFactory.deploy(DataManagerFactory.bytecode, salt)
+    await SingletonFactory.deploy(FeeCalculatorFactory.bytecode, salt)
     const deploymentAddressManager = await Create2Computer.computeAddress(
       salt,
-      ethers.utils.keccak256(DataManagerFactory.bytecode),
+      ethers.utils.keccak256(FeeCalculatorFactory.bytecode),
       SingletonFactory.address,
     )
 
-    DataManager = await ethers.getContractAt('RegistryDataManager', deploymentAddressManager)
+    FeeCalculator = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManager)
 
     /////////////// DATA MANAGER PROXY
     const proxyDeploymentBytecode =
       ProxyFactory.bytecode +
-      ProxyFactory.interface.encodeDeploy([DataManager.address, governance, []]).slice(2)
+      ProxyFactory.interface.encodeDeploy([FeeCalculator.address, governance, []]).slice(2)
 
     await SingletonFactory.deploy(proxyDeploymentBytecode, salt)
 
@@ -155,7 +155,7 @@ describe('General functionality tests', () => {
       SingletonFactory.address,
     )
 
-    DataManagerProxy = await ethers.getContractAt('RegistryDataManager', deploymentAddressManagerProxy)
+    FeeCalculatorProxy = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManagerProxy)
 
     /////////////// RELAYER REGISTRY
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
@@ -210,7 +210,7 @@ describe('General functionality tests', () => {
       TornadoProxyFactory.interface
         .encodeDeploy([
           RelayerRegistry.address,
-          DataManagerProxy.address,
+          FeeCalculatorProxy.address,
           tornadoTrees,
           governance,
           TornadoInstances.slice(0, TornadoInstances.length - 1),
@@ -232,14 +232,16 @@ describe('General functionality tests', () => {
     console.log('Exp. addr. RegistryProxy: ', deploymentAddressRegistryProxy)
     console.log('Exp. addr. RelayerRegistry: ', deploymentAddressRegistry)
     console.log('Exp. addr. ManagerProxy: ', deploymentAddressManagerProxy)
-    console.log('Exp. addr. DataManager: ', deploymentAddressManager)
+    console.log('Exp. addr. FeeCalculator: ', deploymentAddressManager)
     //////////////////////////////////////////////////////////////////////////////////////////
 
     GasCompensationFactory = await ethers.getContractFactory('GasCompensationVault')
     GasCompensation = await GasCompensationFactory.deploy()
 
     ////////////// PROPOSAL OPTION 1
-    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
+    ProposalFactory = await ethers.getContractFactory(
+      process.env.use_mock_proposal == 'true' ? 'MockProposal' : 'RelayerRegistryProposal',
+    )
     Proposal = await ProposalFactory.deploy(tornadoProxy, GasCompensation.address, MockVault.address)
 
     Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)
@@ -440,6 +442,47 @@ describe('General functionality tests', () => {
 
         await proxygov.updateAllFees()
       })
+
+      it('Should be able to update a pools data and still print the price properly', async () => {
+        const proxygov = await TornadoProxy.connect(impGov)
+        let index = 4
+
+        let oldInstance = TornadoInstances[index]
+        oldInstance.instance.poolData.uniswapPoolSwappingFee = 3000
+
+        await proxygov.updateFeeOfPool(index)
+
+        console.log(
+          `${poolTokens[index]}-${denominations[index]}-pool fee:`,
+          (await TornadoProxy.getFeeForPoolId(index)).div(ethers.utils.parseUnits('1', 'szabo')).toNumber() /
+            1000000,
+          'torn',
+        )
+      })
+    })
+
+    describe('Check governance actions on tornado proxy', () => {
+      it('Should succesfully allow gov to modify fee and period', async () => {
+        const proxygov = await TornadoProxy.connect(impGov)
+
+        const initialPoolParameters = await proxygov.dataForTWAPOracle()
+
+        await proxygov.setProtocolFee(3333333)
+        await proxygov.setPeriodForTWAPOracle(25)
+
+        let poolParameters = await proxygov.dataForTWAPOracle()
+
+        expect(poolParameters[0]).to.equal(3333333)
+        expect(poolParameters[1]).to.equal(25)
+
+        await proxygov.setProtocolFee(initialPoolParameters[0])
+        await proxygov.setPeriodForTWAPOracle(initialPoolParameters[1])
+
+        poolParameters = await proxygov.dataForTWAPOracle()
+
+        expect(poolParameters[0]).to.equal(initialPoolParameters[0])
+        expect(poolParameters[1]).to.equal(initialPoolParameters[1])
+      })
     })
 
     describe('Test registry registration', () => {
@@ -509,11 +552,17 @@ describe('General functionality tests', () => {
       it('Unregister should work', async () => {
         let registry = await RelayerRegistry.connect(signerArray[6])
         await registry.unregisterWorker(signerArray[6].address)
+
+        expect(await registry.isRelayer(relayers[0].address)).to.be.true
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[6].address)).to.be.false
 
         registry = await RelayerRegistry.connect(signerArray[8])
+
+        expect(await registry.isRelayer(relayers[0].address)).to.be.true
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.true
         await registry.unregisterWorker(signerArray[8].address)
+
+        expect(await registry.isRelayer(relayers[0].address)).to.be.true
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.false
       })
     })

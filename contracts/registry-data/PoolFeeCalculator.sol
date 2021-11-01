@@ -16,22 +16,22 @@ interface ITornadoProxy {
 }
 
 struct PoolData {
-  uint96 uniPoolFee;
-  uint160 poolFee;
+  uint96 uniswapPoolSwappingFee;
+  uint160 tornFeeOfPool;
 }
 
-struct GlobalPoolData {
-  uint128 protocolFee;
-  uint128 globalPeriod;
+struct ProxyPoolParameters {
+  uint128 proxyFee;
+  uint128 uniswapTimePeriod;
 }
 
 /// @notice Upgradeable contract which calculates the fee for each pool, this is not a library due to upgradeability
 /// @dev If you want to modify how staking works update this contract + the registry contract
-contract RegistryDataManager is Initializable {
+contract PoolFeeCalculator is Initializable {
   using SafeMath for uint256;
 
   // immutable variables need to have a value type, structs can't work
-  uint24 public constant uniPoolFeeTorn = 10000;
+  uint24 public constant uniswapTornPoolSwappingFee = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
   ITornadoProxy public TornadoProxy;
@@ -44,13 +44,13 @@ contract RegistryDataManager is Initializable {
    * @notice function to update a single fee entry
    * @param instance instance for which to update data
    * @param instanceData data associated with the instance
-   * @param globalPoolData data which is independent of each pool
+   * @param proxyPoolParameters data which is independent of each pool
    * @return newFee the new fee pool
    */
   function updateSingleRegistryPoolFee(
     ITornadoInstance instance,
     ModifiedTornadoProxy.Instance calldata instanceData,
-    GlobalPoolData memory globalPoolData
+    ProxyPoolParameters memory proxyPoolParameters
   ) public view returns (uint160 newFee) {
     return
       uint160(
@@ -60,11 +60,11 @@ contract RegistryDataManager is Initializable {
           .div(
             UniswapV3OracleHelper.getPriceRatioOfTokens(
               [torn, address(instanceData.token)],
-              [uniPoolFeeTorn, uint24(instanceData.poolData.uniPoolFee)],
-              uint32(globalPoolData.globalPeriod)
+              [uniswapTornPoolSwappingFee, uint24(instanceData.poolData.uniswapPoolSwappingFee)],
+              uint32(proxyPoolParameters.uniswapTimePeriod)
             )
           )
-          .mul(uint256(globalPoolData.protocolFee))
+          .mul(uint256(proxyPoolParameters.proxyFee))
           .div(1e18)
       );
   }

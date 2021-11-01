@@ -33,9 +33,9 @@ describe('Malicious tests', () => {
 
   let ProxyFactory
 
-  let DataManagerFactory
-  let DataManagerProxy
-  let DataManager
+  let FeeCalculatorFactory
+  let FeeCalculatorProxy
+  let FeeCalculator
 
   let RelayerRegistry
   let RelayerRegistryImplementation
@@ -97,7 +97,7 @@ describe('Malicious tests', () => {
     Create2Computer = await Create2ComputerFactory.deploy()
 
     //// PROXY DEPLOYMENTS
-    DataManagerFactory = await ethers.getContractFactory('RegistryDataManager')
+    FeeCalculatorFactory = await ethers.getContractFactory('PoolFeeCalculator')
     ProxyFactory = await ethers.getContractFactory('AdminUpgradeableProxy')
 
     //// READ IN
@@ -108,8 +108,8 @@ describe('Malicious tests', () => {
 
     for (let i = 0; i < tornadoPools.length; i++) {
       const PoolData = {
-        uniPoolFee: uniswapPoolFees[i],
-        poolFee: feesArray[i],
+        uniswapPoolSwappingFee: uniswapPoolFees[i],
+        tornFeeOfPool: feesArray[i],
       }
       const Instance = {
         isERC20: i > 3,
@@ -126,19 +126,19 @@ describe('Malicious tests', () => {
 
     ///// CREATE2 BLOCK /////////////////////////////////////////////////////////////////////////
     /////////////// DATA MANAGER
-    await SingletonFactory.deploy(DataManagerFactory.bytecode, salt)
+    await SingletonFactory.deploy(FeeCalculatorFactory.bytecode, salt)
     const deploymentAddressManager = await Create2Computer.computeAddress(
       salt,
-      ethers.utils.keccak256(DataManagerFactory.bytecode),
+      ethers.utils.keccak256(FeeCalculatorFactory.bytecode),
       SingletonFactory.address,
     )
 
-    DataManager = await ethers.getContractAt('RegistryDataManager', deploymentAddressManager)
+    FeeCalculator = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManager)
 
     /////////////// DATA MANAGER PROXY
     const proxyDeploymentBytecode =
       ProxyFactory.bytecode +
-      ProxyFactory.interface.encodeDeploy([DataManager.address, governance, []]).slice(2)
+      ProxyFactory.interface.encodeDeploy([FeeCalculator.address, governance, []]).slice(2)
 
     await SingletonFactory.deploy(proxyDeploymentBytecode, salt)
 
@@ -148,7 +148,7 @@ describe('Malicious tests', () => {
       SingletonFactory.address,
     )
 
-    DataManagerProxy = await ethers.getContractAt('RegistryDataManager', deploymentAddressManagerProxy)
+    FeeCalculatorProxy = await ethers.getContractAt('PoolFeeCalculator', deploymentAddressManagerProxy)
 
     /////////////// RELAYER REGISTRY
     RegistryFactory = await ethers.getContractFactory('RelayerRegistry')
@@ -203,7 +203,7 @@ describe('Malicious tests', () => {
       TornadoProxyFactory.interface
         .encodeDeploy([
           RelayerRegistry.address,
-          DataManagerProxy.address,
+          FeeCalculatorProxy.address,
           tornadoTrees,
           governance,
           TornadoInstances.slice(0, TornadoInstances.length - 1),
@@ -225,14 +225,16 @@ describe('Malicious tests', () => {
     console.log('Exp. addr. RegistryProxy: ', deploymentAddressRegistryProxy)
     console.log('Exp. addr. RelayerRegistry: ', deploymentAddressRegistry)
     console.log('Exp. addr. ManagerProxy: ', deploymentAddressManagerProxy)
-    console.log('Exp. addr. DataManager: ', deploymentAddressManager)
+    console.log('Exp. addr. FeeCalculator: ', deploymentAddressManager)
     //////////////////////////////////////////////////////////////////////////////////////////
 
     GasCompensationFactory = await ethers.getContractFactory('GasCompensationVault')
     GasCompensation = await GasCompensationFactory.deploy()
 
     ////////////// PROPOSAL OPTION 1
-    ProposalFactory = await ethers.getContractFactory('RelayerRegistryProposal')
+    ProposalFactory = await ethers.getContractFactory(
+      process.env.use_mock_proposal == 'true' ? 'MockProposal' : 'RelayerRegistryProposal',
+    )
     Proposal = await ProposalFactory.deploy(tornadoProxy, GasCompensation.address, MockVault.address)
 
     Governance = await ethers.getContractAt('GovernanceStakingUpgrade', governance)
@@ -398,6 +400,16 @@ describe('Malicious tests', () => {
         )
       })
 
+      it('Random account shouldnt be able to register if not owner of ens node', async () => {
+        const gov = await Governance.connect(signerArray[0])
+        await gov.unlock(ethers.utils.parseEther('200'))
+        const registry = await RelayerRegistry.connect(signerArray[0])
+
+        await expect(registry.register(relayers[0].node, ethers.utils.parseEther('200'), [])).to.be.reverted
+
+        await gov.lockWithApproval(ethers.utils.parseEther('200'))
+      })
+
       it('Should succesfully register all relayers', async function () {
         for (let i = 0; i < 4; i++) {
           ;(await getToken(torn))
@@ -437,6 +449,11 @@ describe('Malicious tests', () => {
         await registry.unregisterWorker(signerArray[8].address)
         expect(await registry.isRelayerRegistered(relayers[0].address, signerArray[8].address)).to.be.false
       })
+
+      it('Random account shouldnt be able to unregister someone', async () => {
+        const registry = await RelayerRegistry.connect(signerArray[0])
+        await expect(registry.unregisterWorker(relayers[0].address)).to.be.reverted
+      })
     })
 
     describe('Malicious registration', () => {
@@ -452,6 +469,25 @@ describe('Malicious tests', () => {
         await expect(
           registry.register(relayers[0].node, ethers.utils.parseEther('100'), relayers[2].subaddresses),
         ).to.be.reverted
+      })
+    })
+
+    describe('Malicious staking contract interaction', () => {
+      it('Should not be able to call addBurnRewards if not registry', async () => {
+        await expect(StakingContract.addBurnRewards()).to.be.reverted
+      })
+
+      it('Should not be able to call updateRewardsOnLockedBalanceChange if not gov', async () => {
+        await expect(
+          StakingContract.updateRewardsOnLockedBalanceChange(
+            signerArray[0].address,
+            ethers.utils.parseEther('10'),
+          ),
+        ).to.be.reverted
+      })
+
+      it('Should not be able to call rescueTokens if not gov', async () => {
+        await expect(StakingContract.rescueTokens(3556456456454)).to.be.reverted
       })
     })
 

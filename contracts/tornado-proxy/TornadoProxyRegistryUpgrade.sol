@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "./ModifiedTornadoProxy.sol";
-import "../registry-data/RegistryDataManager.sol";
+import "../registry-data/PoolFeeCalculator.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IRelayerRegistry {
@@ -19,10 +19,10 @@ interface IRelayerRegistry {
 
 contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
   IRelayerRegistry public immutable Registry;
-  RegistryDataManager public immutable DataManager;
+  PoolFeeCalculator public immutable DataManager;
 
   ITornadoInstance[] public getInstanceForPoolId;
-  GlobalPoolData public dataForTWAPOracle;
+  ProxyPoolParameters public dataForTWAPOracle;
 
   event FeesUpdated(uint256 indexed timestamp);
   event FeeUpdated(uint256 indexed timestamp, uint256 indexed poolId);
@@ -35,7 +35,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     Tornado[] memory instances
   ) public ModifiedTornadoProxy(tornadoTrees, governance, instances) {
     Registry = IRelayerRegistry(registryAddress);
-    DataManager = RegistryDataManager(dataManagerAddress);
+    DataManager = PoolFeeCalculator(dataManagerAddress);
 
     for (uint256 i = 0; i < instances.length; i++) {
       getInstanceForPoolId.push(instances[i].addr);
@@ -64,12 +64,12 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
   /// @dev adds the instance when uniPoolFee == 0 because this is pool specific and first time assigned != 0 at first updat
   ///      - call should also break because of update if fee is invalid
   function updateInstance(Tornado memory _tornado) external virtual override onlyGovernance {
-    _tornado.instance.poolData.poolFee = DataManager.updateSingleRegistryPoolFee(
+    _tornado.instance.poolData.tornFeeOfPool = DataManager.updateSingleRegistryPoolFee(
       _tornado.addr,
       _tornado.instance,
       dataForTWAPOracle
     );
-    if (instances[_tornado.addr].poolData.uniPoolFee == 0) getInstanceForPoolId.push(_tornado.addr);
+    if (instances[_tornado.addr].poolData.uniswapPoolSwappingFee == 0) getInstanceForPoolId.push(_tornado.addr);
     _updateInstance(_tornado);
   }
 
@@ -84,7 +84,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
    * @param newFee the new fee to use
    * */
   function setProtocolFee(uint128 newFee) external onlyGovernance {
-    dataForTWAPOracle.protocolFee = newFee;
+    dataForTWAPOracle.proxyFee = newFee;
   }
 
   /**
@@ -92,7 +92,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
    * @param newPeriod the new period to use
    * */
   function setPeriodForTWAPOracle(uint128 newPeriod) external onlyGovernance {
-    dataForTWAPOracle.globalPeriod = newPeriod;
+    dataForTWAPOracle.uniswapTimePeriod = newPeriod;
   }
 
   /**
@@ -110,7 +110,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
    * @return fee for the pool
    * */
   function getFeeForPool(ITornadoInstance pool) public view returns (uint256) {
-    return instances[pool].poolData.poolFee;
+    return instances[pool].poolData.tornFeeOfPool;
   }
 
   function getNumberOfInstances() public view returns (uint256) {
@@ -144,7 +144,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
    */
   function updateFeeOfPool(uint256 poolId) public {
     ITornadoInstance instance = getInstanceForPoolId[poolId];
-    instances[instance].poolData.poolFee = DataManager.updateSingleRegistryPoolFee(
+    instances[instance].poolData.tornFeeOfPool = DataManager.updateSingleRegistryPoolFee(
       instance,
       instances[instance],
       dataForTWAPOracle

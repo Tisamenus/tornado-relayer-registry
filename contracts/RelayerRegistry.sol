@@ -145,8 +145,8 @@ contract RelayerRegistry is Initializable {
    * */
   function unregisterWorker(address worker) external {
     if (worker != msg.sender) require(getMasterForWorker[worker] == msg.sender, "only owner of worker");
-    getMasterForWorker[msg.sender] = address(0);
-    emit WorkerUnregistered(msg.sender);
+    getMasterForWorker[worker] = address(0);
+    emit WorkerUnregistered(worker);
   }
 
   /**
