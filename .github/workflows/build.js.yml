@@ -24,7 +24,6 @@ jobs:
         with:
           node-version: 12
       - run: yarn install
-      - run: yarn add git+https://${{ secrets.PAT }}:x-oauth-basic@github.com/Tisamenus/tornado-lottery-period.git#production
       - run: yarn lint
       - run: yarn test:all
         env:

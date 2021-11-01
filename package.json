@@ -33,6 +33,7 @@
     "@openzeppelin/hardhat-upgrades": "1.10.0",
     "@uniswap/v3-core": "https://github.com/Tisamenus/uniswap-v3-core",
     "@uniswap/v3-periphery": "https://github.com/Tisamenus/uniswap-v3-periphery",
+    "tornado-lottery-period": "https://github.com/Tisamenus/tornado-lottery-period.git#production",
     "tornado-anonymity-mining": "^2.1.5",
     "tornado-cli": "^0.0.1",
     "tornado-governance": "^1.0.3",
