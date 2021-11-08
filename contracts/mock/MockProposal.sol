@@ -3,7 +3,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { ImmutableGovernanceInformation } from "../../submodules/tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
+import { ImmutableGovernanceInformation } from "tornado-lottery-period/contracts/ImmutableGovernanceInformation.sol";
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { LoopbackProxy } from "tornado-governance/contracts/LoopbackProxy.sol";
