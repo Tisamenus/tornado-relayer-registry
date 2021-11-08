@@ -10,7 +10,7 @@ import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoTrees.sol";
 import "../registry-data/PoolFeeCalculator.sol";
 
-contract ModifiedTornadoProxy {
+contract TornadoProxyWithPoolData {
   using SafeERC20 for IERC20;
 
   event EncryptedNote(address indexed sender, bytes encryptedNote);
@@ -132,7 +132,6 @@ contract ModifiedTornadoProxy {
     }
   }
 
-  // virtual added
   function _updateInstance(Tornado memory _tornado) internal virtual {
     instances[_tornado.addr] = _tornado.instance;
     if (_tornado.instance.isERC20) {

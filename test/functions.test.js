@@ -859,7 +859,7 @@ describe('General functionality tests', () => {
 
         // gov to rescue
         const staking = await StakingContract.connect(impGov)
-        await expect(() => staking.rescueTokens(hundred)).to.changeTokenBalance(
+        await expect(() => staking.withdrawTorn(hundred)).to.changeTokenBalance(
           await getToken(torn),
           Governance,
           hundred,
@@ -872,7 +872,7 @@ describe('General functionality tests', () => {
 
         const initialBalance = await tornToken.balanceOf(StakingContract.address)
 
-        await expect(() => staking.rescueTokens(ethers.constants.MaxUint256)).to.changeTokenBalance(
+        await expect(() => staking.withdrawTorn(ethers.constants.MaxUint256)).to.changeTokenBalance(
           await getToken(torn),
           Governance,
           initialBalance,

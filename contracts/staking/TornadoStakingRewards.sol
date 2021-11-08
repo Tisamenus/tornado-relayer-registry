@@ -37,14 +37,13 @@ contract TornadoStakingRewards {
   /// @notice the sum torn_burned_i/locked_amount_i*coefficient where i is incremented at each burn
   uint256 public accumulatedRewardPerTorn;
 
-  /// @notice notes down accumulatedRewardPerTorn for an address on a claim
+  /// @notice notes down accumulatedRewardPerTorn for an address on a lock/unlock/claim
   mapping(address => uint256) public accumulatedRewardRateOnLastUpdate;
   /// @notice notes down how much an account may claim
   mapping(address => uint256) public accumulatedRewards;
 
-  event RewardsUpdated(address indexed account, uint256 indexed rewards);
-  event RewardsClaimed(address indexed account, uint256 indexed rewardsClaimed);
-  event AccumulatedRewardPerTornUpdated(uint256 indexed newRewardPerTorn);
+  event RewardsUpdated(address indexed account, uint256 rewards);
+  event RewardsClaimed(address indexed account, uint256 rewardsClaimed);
 
   constructor(
     address governanceAddress,
@@ -94,7 +93,6 @@ contract TornadoStakingRewards {
     accumulatedRewardPerTorn = accumulatedRewardPerTorn.add(
       amount.mul(ratioConstant).div(torn.balanceOf(address(Governance.userVault())))
     );
-    emit AccumulatedRewardPerTornUpdated(accumulatedRewardPerTorn);
   }
 
   /**
@@ -110,7 +108,7 @@ contract TornadoStakingRewards {
   /**
    * @notice This function should allow governance rescue tokens from the staking rewards contract
    * */
-  function rescueTokens(uint256 amount) external onlyGovernance {
+  function withdrawTorn(uint256 amount) external onlyGovernance {
     if (amount == type(uint256).max) amount = torn.balanceOf(address(this));
     torn.safeTransfer(address(Governance), amount);
   }

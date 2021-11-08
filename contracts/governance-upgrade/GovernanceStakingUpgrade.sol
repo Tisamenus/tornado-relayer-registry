@@ -3,7 +3,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { GovernanceGasUpgrade } from "../../submodules/tornado-lottery-period/contracts/gas/GovernanceGasUpgrade.sol";
+import { GovernanceGasUpgrade } from "tornado-lottery-period/contracts/gas/GovernanceGasUpgrade.sol";
 
 interface ITornadoStakingRewards {
   function updateRewardsOnLockedBalanceChange(address account, uint256 amountLockedBeforehand) external;

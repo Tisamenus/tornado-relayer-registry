@@ -3,7 +3,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./ModifiedTornadoProxy.sol";
+import "./TornadoProxyWithPoolData.sol";
 import "../registry-data/PoolFeeCalculator.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -17,7 +17,7 @@ interface IRelayerRegistry {
   function addPool(uint96 uniPoolFee, ITornadoInstance pool) external;
 }
 
-contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
+contract TornadoProxyRegistryUpgrade is TornadoProxyWithPoolData, ReentrancyGuard {
   IRelayerRegistry public immutable Registry;
   PoolFeeCalculator public immutable DataManager;
 
@@ -33,7 +33,7 @@ contract TornadoProxyRegistryUpgrade is ModifiedTornadoProxy, ReentrancyGuard {
     address tornadoTrees,
     address governance,
     Tornado[] memory instances
-  ) public ModifiedTornadoProxy(tornadoTrees, governance, instances) {
+  ) public TornadoProxyWithPoolData(tornadoTrees, governance, instances) {
     Registry = IRelayerRegistry(registryAddress);
     DataManager = PoolFeeCalculator(dataManagerAddress);
 

@@ -487,7 +487,7 @@ describe('Malicious tests', () => {
       })
 
       it('Should not be able to call rescueTokens if not gov', async () => {
-        await expect(StakingContract.rescueTokens(3556456456454)).to.be.reverted
+        await expect(StakingContract.withdrawTorn(3556456456454)).to.be.reverted
       })
     })
 

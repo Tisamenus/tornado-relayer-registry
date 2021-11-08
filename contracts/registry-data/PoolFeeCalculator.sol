@@ -9,7 +9,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
-import "../tornado-proxy/ModifiedTornadoProxy.sol";
+import "../tornado-proxy/TornadoProxyWithPoolData.sol";
 
 interface ITornadoProxy {
   function getPoolToken(ITornadoInstance instance) external view returns (address);
@@ -56,7 +56,7 @@ contract PoolFeeCalculator is Initializable {
    */
   function updateSingleRegistryPoolFee(
     ITornadoInstance instance,
-    ModifiedTornadoProxy.Instance calldata instanceData,
+    TornadoProxyWithPoolData.Instance calldata instanceData,
     ProxyPoolParameters memory proxyPoolParameters
   ) public view returns (uint160 newFee) {
     return
