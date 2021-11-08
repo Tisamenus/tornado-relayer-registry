@@ -2,11 +2,22 @@
 
 [![Build Status](https://img.shields.io/github/workflow/status/Tisamenus/tornado-relayer-registry/build)](https://github.com/h-ivor/tornado-relayer-registry/actions) [![Coverage Status](https://img.shields.io/coveralls/github/Tisamenus/tornado-relayer-registry)](https://coveralls.io/github/Tisamenus/tornado-relayer-registry?branch=new)
 
-Repository for a governance upgrade which includes:
+Repository for a governance upgrade which includes a registry for relayer registration and staking mechanisms for the torn token.
 
-- A new Torn staking mechanism.
-- Vault to hold user funds.
-- Gas compensation mechanism for functions.
+# Overview
+
+1. Anyone can become a relayer by staking TORN into Registry contract.
+2. Minimum stake is governed by the Governance.
+3. Each Pool has its own fee % which is also set by the Governance.
+4. On every withdrawal via relayer, the relayer has to pay the Tornado Pool fee in TORN.
+   The fee is deducted from his staked balance.
+5. All collected fees are stored into StakingReward contract.
+6. Any TORN holder can stake their TORN into Governance contract like they were before, but
+   earning fees proportionately to their stake.
+
+Caveats:
+Anyone can trigger price oracle update in order to adjust the calculation of how much TORN should be deducted.
+It uses Uniswap V3 TWAP oracle model.
 
 ## Setup
 

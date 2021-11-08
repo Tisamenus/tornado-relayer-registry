@@ -29,9 +29,3 @@ jobs:
         env:
           use_mock_proposal: false
           use_latest_block: false
-
-      - name: Generate coverage
-        run: yarn coverage
-        env:
-          use_mock_proposal: true
-          use_latest_block: false
