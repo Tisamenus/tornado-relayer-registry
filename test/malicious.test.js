@@ -546,6 +546,13 @@ describe('Malicious tests', () => {
       })
 
       it('Should not break logic by setting accumulated reward to 0, but let it revert and downgrade', async () => {
+        let govtorn = (await getToken(torn)).connect(impGov)
+        await govtorn.approve(StakingContract.address, ethers.utils.parseEther('20'))
+        await govtorn.transfer(StakingContract.address, ethers.utils.parseEther('20'))
+
+        let govstaking = await StakingContract.connect(impGov)
+        await govstaking.addBurnRewards(ethers.utils.parseEther('20'))
+
         const snapshotId = await sendr('evm_snapshot', [])
 
         await StakingContract.getReward()
@@ -556,13 +563,6 @@ describe('Malicious tests', () => {
           '0x0000000000000000000000000000000000000000000000000000000000000000',
         ])
         expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(0)
-
-        let govtorn = (await getToken(torn)).connect(impGov)
-        await govtorn.approve(StakingContract.address, ethers.utils.parseEther('20'))
-        await govtorn.transfer(StakingContract.address, ethers.utils.parseEther('20'))
-
-        let govstaking = await StakingContract.connect(impGov)
-        await govstaking.addBurnRewards(ethers.utils.parseEther('20'))
 
         await expect(StakingContract.getReward()).to.be.reverted
 
