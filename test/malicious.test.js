@@ -474,7 +474,7 @@ describe('Malicious tests', () => {
 
     describe('Malicious staking contract interaction', () => {
       it('Should not be able to call addBurnRewards if not registry', async () => {
-        await expect(StakingContract.addBurnRewards()).to.be.reverted
+        await expect(StakingContract.addBurnRewards(25)).to.be.reverted
       })
 
       it('Should not be able to call updateRewardsOnLockedBalanceChange if not gov', async () => {
@@ -556,6 +556,13 @@ describe('Malicious tests', () => {
           '0x0000000000000000000000000000000000000000000000000000000000000000',
         ])
         expect(await StakingContract.accumulatedRewardPerTorn()).to.equal(0)
+
+        let govtorn = (await getToken(torn)).connect(impGov)
+        await govtorn.approve(StakingContract.address, ethers.utils.parseEther('20'))
+        await govtorn.transfer(StakingContract.address, ethers.utils.parseEther('20'))
+
+        let govstaking = await StakingContract.connect(impGov)
+        await govstaking.addBurnRewards(ethers.utils.parseEther('20'))
 
         await expect(StakingContract.getReward()).to.be.reverted
 

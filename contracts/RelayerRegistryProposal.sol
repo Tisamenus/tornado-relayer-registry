@@ -27,9 +27,9 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0xbed362d2eE9AB8a1a4167F3020c018BF78DF2652;
-  address public constant expectedStaking = 0x0138b1Fc3AF55C0ec8Fde346591640a91022eE75;
-  RelayerRegistry public constant Registry = RelayerRegistry(0xFd0086Cd33EB7B1610c1940637DbcEFa0552fD7A);
+  address public constant expectedNewTornadoProxy = 0x43A616981B995F2b12CE9184123F398D4816cCE3;
+  address public constant expectedStaking = 0x3D8a135B150E0CDd65Cf8355629c4FADb178BfdF;
+  RelayerRegistry public constant Registry = RelayerRegistry(0x9cd463F1572384593C5f73D93C1D6cbaf22EAbbB);
 
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
   address public immutable oldTornadoProxy;
@@ -64,8 +64,6 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
     TornadoProxyRegistryUpgrade TornadoProxy = TornadoProxyRegistryUpgrade(expectedNewTornadoProxy);
 
     disableOldProxy(TornadoProxy);
-
-    (TornadoProxy.DataManager()).initialize(address(TornadoProxy));
 
     TornadoProxy.setProtocolFee(1e15);
     TornadoProxy.setPeriodForTWAPOracle(5400);

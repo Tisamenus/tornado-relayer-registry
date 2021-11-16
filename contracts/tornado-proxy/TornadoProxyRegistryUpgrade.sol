@@ -13,8 +13,6 @@ interface IRelayerRegistry {
     address relayer,
     ITornadoInstance pool
   ) external;
-
-  function addPool(uint96 uniPoolFee, ITornadoInstance pool) external;
 }
 
 contract TornadoProxyRegistryUpgrade is TornadoProxyWithPoolData, ReentrancyGuard {
@@ -56,7 +54,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxyWithPoolData, ReentrancyGuar
     uint256 _fee,
     uint256 _refund
   ) public payable virtual override nonReentrant {
-    if (_relayer != address(0)) Registry.burn(msg.sender, _relayer, _tornado);
+    Registry.burn(msg.sender, _relayer, _tornado);
     super.withdraw(_tornado, _proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
   }
 
@@ -64,7 +62,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxyWithPoolData, ReentrancyGuar
   /// @dev adds the instance when uniPoolFee == 0 because this is pool specific and first time assigned != 0 at first updat
   ///      - call should also break because of update if fee is invalid
   function updateInstance(Tornado memory _tornado) external virtual override onlyGovernance {
-    _tornado.instance.poolData.tornFeeOfPool = DataManager.updateSingleRegistryPoolFee(
+    _tornado.instance.poolData.tornFeeOfPool = DataManager.calculateSingleRegistryPoolFee(
       _tornado.addr,
       _tornado.instance,
       dataForTWAPOracle
@@ -144,7 +142,7 @@ contract TornadoProxyRegistryUpgrade is TornadoProxyWithPoolData, ReentrancyGuar
    */
   function updateFeeOfPool(uint256 poolId) public {
     ITornadoInstance instance = getInstanceForPoolId[poolId];
-    instances[instance].poolData.tornFeeOfPool = DataManager.updateSingleRegistryPoolFee(
+    instances[instance].poolData.tornFeeOfPool = DataManager.calculateSingleRegistryPoolFee(
       instance,
       instances[instance],
       dataForTWAPOracle

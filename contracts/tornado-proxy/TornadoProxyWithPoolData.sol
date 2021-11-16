@@ -10,6 +10,10 @@ import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoTrees.sol";
 import "../registry-data/PoolFeeCalculator.sol";
 
+/// @notice This is a proxy which is identical to the TornadoProxy which can be found in the
+///         tornado-anonymity-mining repository of the tornado cash github.
+///         The only signficant difference to the TornadoProxy is that the Instance struct has
+///         an additional member called poolData, the def of which can be found in the PoolFeeCalculator.sol file.
 contract TornadoProxyWithPoolData {
   using SafeERC20 for IERC20;
 

@@ -61,11 +61,6 @@ contract TornadoStakingRewards {
     _;
   }
 
-  modifier onlyRelayerRegistry() {
-    require(msg.sender == registry, "only relayer registry");
-    _;
-  }
-
   /**
    * @notice This function should safely send a user his rewards.
    * @dev IMPORTANT FUNCTION:
@@ -89,7 +84,8 @@ contract TornadoStakingRewards {
    *        (amount <= 1e25) * 1e25 / (balance of vault <= 1e25) -> (extreme values)
    * @param amount amount to add to the rewards
    */
-  function addBurnRewards(uint256 amount) external onlyRelayerRegistry {
+  function addBurnRewards(uint256 amount) external {
+    require(msg.sender == address(Governance) || msg.sender == registry, "unauthorized");
     accumulatedRewardPerTorn = accumulatedRewardPerTorn.add(
       amount.mul(ratioConstant).div(torn.balanceOf(address(Governance.userVault())))
     );

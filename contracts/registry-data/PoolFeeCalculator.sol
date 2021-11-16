@@ -34,18 +34,12 @@ struct ProxyPoolParameters {
 
 /// @notice Upgradeable contract which calculates the fee for each pool, this is not a library due to upgradeability
 /// @dev If you want to modify how staking works update this contract + the registry contract
-contract PoolFeeCalculator is Initializable {
+contract PoolFeeCalculator {
   using SafeMath for uint256;
 
   // immutable variables need to have a value type, structs can't work
   uint24 public constant uniswapTornPoolSwappingFee = 10000;
   address public constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
-
-  ITornadoProxy public TornadoProxy;
-
-  function initialize(address tornadoProxy) external initializer {
-    TornadoProxy = ITornadoProxy(tornadoProxy);
-  }
 
   /**
    * @notice function to update a single fee entry
@@ -54,7 +48,7 @@ contract PoolFeeCalculator is Initializable {
    * @param proxyPoolParameters data which is independent of each pool
    * @return newFee the new fee pool
    */
-  function updateSingleRegistryPoolFee(
+  function calculateSingleRegistryPoolFee(
     ITornadoInstance instance,
     TornadoProxyWithPoolData.Instance calldata instanceData,
     ProxyPoolParameters memory proxyPoolParameters

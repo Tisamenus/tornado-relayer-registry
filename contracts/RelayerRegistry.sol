@@ -26,8 +26,11 @@ struct RelayerMetadata {
 /**
  * @notice Registry contract, one of the main contracts of this protocol upgrade.
  *         The contract should store relayers' addresses and data attributed to the
- *         master address of the relayer. This data includes the relayers' stake
- *         he charges.
+ *         master address of the relayer. This data includes the relayers stake and
+ *         his ensHash.
+ *         A relayers master address has a number of subaddresses called "workers",
+ *         these are all addresses which burn stake in communication with the proxy.
+ *         If a relayer is not registered, he is not displayed on the frontend.
  * @dev CONTRACT RISKS:
  *      - if setter functions are compromised, relayer metadata would be at risk, including the noted amount of his balance
  *      - if burn function is compromised, relayers run the risk of being unable to handle withdrawals
@@ -38,6 +41,7 @@ contract RelayerRegistry is Initializable {
   using SafeERC20 for IERC20;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
+
   address public governance;
 
   IERC20 public torn;
@@ -92,6 +96,7 @@ contract RelayerRegistry is Initializable {
     governance = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
     torn = IERC20(tornTokenAddress);
+    getMasterForWorker[address(0)] = address(this);
   }
 
   /**
@@ -142,9 +147,11 @@ contract RelayerRegistry is Initializable {
    * @dev designed this way as to allow someone to unregister themselves in case a relayer misbehaves
    *      - this should be followed by an action like burning relayer stake
    *      - there was an option of allowing the sender to burn relayer stake in case of malicious behaviour, this feature was not included in the end
+   *      - reverts if trying to unregister master, otherwise contract would break. in general, there should be no reason to unregister master at all
    * */
   function unregisterWorker(address worker) external {
     if (worker != msg.sender) require(getMasterForWorker[worker] == msg.sender, "only owner of worker");
+    require(getMasterForWorker[worker] != worker, "cant unregister master");
     getMasterForWorker[worker] = address(0);
     emit WorkerUnregistered(worker);
   }
@@ -176,17 +183,14 @@ contract RelayerRegistry is Initializable {
     address sender,
     address relayer,
     ITornadoInstance pool
-  ) external onlyRelayer(sender, relayer) onlyTornadoProxy {
+  ) external onlyTornadoProxy {
+    address masterAddress = getMasterForWorker[sender];
+    if (masterAddress == address(0)) return;
+    require(masterAddress == relayer, "only relayer");
     uint256 toBurn = TornadoProxy.getFeeForPool(pool);
     getMetadataForRelayer[relayer].balance = getMetadataForRelayer[relayer].balance.sub(toBurn);
     Staking.addBurnRewards(toBurn);
     emit StakeBurned(relayer, toBurn);
-  }
-
-  function addRewards(uint256 amount) external onlyGovernance {
-    torn.safeTransferFrom(msg.sender, address(Staking), amount);
-    Staking.addBurnRewards(amount);
-    emit RewardsAddedByGovernance(amount);
   }
 
   /**
@@ -210,13 +214,13 @@ contract RelayerRegistry is Initializable {
   /**
    * @notice This function should allow governance to nullify a relayers balance
    * @dev IMPORTANT FUNCTION:
-   *      - Should add his entire rest balance as burned rewards
    *      - Should nullify the balance
+   *      - Adding nullified balance as rewards was refactored to allow for the flexibility of these funds (for gov to operate with them)
    * @param relayer address of relayer who's balance is to nullify
    * */
   function nullifyBalance(address relayer) external onlyGovernance {
     address masterAddress = getMasterForWorker[relayer];
-    Staking.addBurnRewards(getMetadataForRelayer[masterAddress].balance);
+    require(relayer == masterAddress, "must be master");
     getMetadataForRelayer[masterAddress].balance = 0;
     emit RelayerBalanceNullified(relayer);
   }

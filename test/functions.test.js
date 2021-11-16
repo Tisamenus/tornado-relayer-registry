@@ -841,15 +841,6 @@ describe('General functionality tests', () => {
         expect(balance).to.eq(0)
       })
 
-      it('Should harvest those rewards again', async () => {
-        for (let i = 0; i < 3; i++) {
-          const initBalance = await erc20BalanceOf(torn, signerArray[i].address)
-          const staking = await StakingContract.connect(signerArray[i])
-          await staking.getReward()
-          expect(await erc20BalanceOf(torn, signerArray[i].address)).to.be.gt(initBalance)
-        }
-      })
-
       it('Governance should be able to save some tokens', async () => {
         let snapshot = await sendr('evm_snapshot', [])
 
@@ -882,15 +873,13 @@ describe('General functionality tests', () => {
       })
 
       it('Governance should be able to add rewards', async () => {
-        const registry = await RelayerRegistry.connect(impGov)
+        const staking = await StakingContract.connect(impGov)
         const tornToken = (await getToken(torn)).connect(impGov)
 
-        await tornToken.approve(registry.address, ethers.utils.parseEther('100'))
-        await expect(() => registry.addRewards(ethers.utils.parseEther('100'))).to.changeTokenBalance(
-          tornToken,
-          StakingContract,
-          ethers.utils.parseEther('100'),
-        )
+        await tornToken.approve(staking.address, ethers.utils.parseEther('100'))
+        await tornToken.transfer(staking.address, ethers.utils.parseEther('100'))
+
+        await expect(staking.addBurnRewards(ethers.utils.parseEther('100'))).to.not.be.reverted
       })
 
       it('Should harvest those rewards again', async () => {
