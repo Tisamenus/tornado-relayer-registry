@@ -13,7 +13,8 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { GovernanceStakingUpgrade } from "./governance-upgrade/GovernanceStakingUpgrade.sol";
 import { TornadoStakingRewards } from "./staking/TornadoStakingRewards.sol";
 import { RelayerRegistry } from "./RelayerRegistry.sol";
-import { TornadoProxyRegistryUpgrade } from "./tornado-proxy/TornadoProxyRegistryUpgrade.sol";
+import { TornadoRouter } from "./instances/TornadoRouter.sol";
+import { TornadoInstances } from "./instances/TornadoInstances.sol";
 
 import { TornadoProxy, ITornadoInstance } from "tornado-anonymity-mining/contracts/TornadoProxy.sol";
 
@@ -27,11 +28,13 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0x99FD4f3A14E524fd59806eD52c41f59D9E7A797e;
-  address public constant expectedStaking = 0x9CD713A83d22a12CcAAF55d71F0145849dbF0826;
-  RelayerRegistry public constant Registry = RelayerRegistry(0x12B88f72b3609dBd6777feCf1126928F8ACDEF71);
+  address public constant expectedTornadoRouter = 0xbed362d2eE9AB8a1a4167F3020c018BF78DF2652;
+  address public constant expectedTornadoInstances = 0xbed362d2eE9AB8a1a4167F3020c018BF78DF2652;
+  address public constant expectedStaking = 0x0138b1Fc3AF55C0ec8Fde346591640a91022eE75;
 
+  RelayerRegistry public constant Registry = RelayerRegistry(0xFd0086Cd33EB7B1610c1940637DbcEFa0552fD7A);
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
+
   address public immutable oldTornadoProxy;
   address public immutable gasCompLogic;
   address public immutable tornadoVault;
@@ -47,7 +50,8 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   }
 
   function executeProposal() external {
-    require(expectedNewTornadoProxy.isContract(), "tornado proxy not deployed");
+    require(expectedTornadoRouter.isContract(), "tornado router not deployed");
+    require(expectedTornadoInstances.isContract(), "tornado instances not deployed");
     require(expectedStaking.isContract(), "staking contract not deployed");
     require(address(Registry).isContract(), "registry proxy not deployed");
 
@@ -57,29 +61,29 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
 
     Registry.initialize(GovernanceAddress, expectedStaking);
 
-    TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(expectedNewTornadoProxy);
+    TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(expectedTornadoRouter);
 
-    Registry.registerProxy(expectedNewTornadoProxy);
+    Registry.registerInstances(expectedTornadoRouter);
 
-    TornadoProxyRegistryUpgrade TornadoProxy = TornadoProxyRegistryUpgrade(expectedNewTornadoProxy);
+    TornadoInstances tornadoInstances = TornadoInstances(expectedTornadoRouter);
 
-    disableOldProxy(TornadoProxy);
+    disableOldProxy(tornadoInstances);
 
-    TornadoProxy.setProtocolFee(1e15);
-    TornadoProxy.setPeriodForTWAPOracle(5400);
+    tornadoInstances.setProtocolFee(1e15);
+    tornadoInstances.setPeriodForTWAPOracle(5400);
 
     Registry.setMinStakeAmount(100 ether);
   }
 
-  function disableOldProxy(TornadoProxyRegistryUpgrade NewTornadoProxy) private {
+  function disableOldProxy(TornadoInstances tornadoInstances) private {
     TornadoProxy oldProxy = TornadoProxy(oldTornadoProxy);
 
     TornadoProxy.Tornado memory currentTornado;
     ITornadoInstance currentInstance;
-    uint256 bound = NewTornadoProxy.getNumberOfInstances();
+    uint256 bound = tornadoInstances.getNumberOfInstances();
 
     for (uint256 i = 0; i < bound; i++) {
-      currentInstance = NewTornadoProxy.getInstanceForPoolId(i);
+      currentInstance = tornadoInstances.getInstanceForPoolId(i);
       (bool isERC20, IERC20 token, ) = oldProxy.instances(currentInstance);
       currentTornado = TornadoProxy.Tornado(
         currentInstance,

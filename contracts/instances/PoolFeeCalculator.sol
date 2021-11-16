@@ -6,10 +6,9 @@ pragma experimental ABIEncoderV2;
 import { UniswapV3OracleHelper } from "../libraries/UniswapV3OracleHelper.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/Initializable.sol";
 
 import "tornado-anonymity-mining/contracts/interfaces/ITornadoInstance.sol";
-import "../tornado-proxy/TornadoProxyWithPoolData.sol";
+import "./TornadoInstances.sol";
 
 interface ITornadoProxy {
   function getPoolToken(ITornadoInstance instance) external view returns (address);
@@ -50,7 +49,7 @@ contract PoolFeeCalculator {
    */
   function calculateSingleRegistryPoolFee(
     ITornadoInstance instance,
-    TornadoProxyWithPoolData.Instance calldata instanceData,
+    Instance calldata instanceData,
     ProxyPoolParameters memory proxyPoolParameters
   ) public view returns (uint160 newFee) {
     return
