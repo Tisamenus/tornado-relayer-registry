@@ -27,9 +27,9 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
   address public constant tornadoTreesAddress = 0x527653eA119F3E6a1F5BD18fbF4714081D7B31ce;
 
   // FROM CREATE2 AND NEEDED
-  address public constant expectedNewTornadoProxy = 0x43A616981B995F2b12CE9184123F398D4816cCE3;
-  address public constant expectedStaking = 0x3D8a135B150E0CDd65Cf8355629c4FADb178BfdF;
-  RelayerRegistry public constant Registry = RelayerRegistry(0x9cd463F1572384593C5f73D93C1D6cbaf22EAbbB);
+  address public constant expectedNewTornadoProxy = 0x99FD4f3A14E524fd59806eD52c41f59D9E7A797e;
+  address public constant expectedStaking = 0x9CD713A83d22a12CcAAF55d71F0145849dbF0826;
+  RelayerRegistry public constant Registry = RelayerRegistry(0x12B88f72b3609dBd6777feCf1126928F8ACDEF71);
 
   IERC20 public constant tornToken = IERC20(TornTokenAddress);
   address public immutable oldTornadoProxy;
@@ -55,7 +55,7 @@ contract RelayerRegistryProposal is ImmutableGovernanceInformation {
       address(new GovernanceStakingUpgrade(expectedStaking, gasCompLogic, tornadoVault))
     );
 
-    Registry.initialize(GovernanceAddress, expectedStaking, address(tornToken));
+    Registry.initialize(GovernanceAddress, expectedStaking);
 
     TornadoTrees(tornadoTreesAddress).setTornadoProxyContract(expectedNewTornadoProxy);
 

@@ -41,10 +41,9 @@ contract RelayerRegistry is Initializable {
   using SafeERC20 for IERC20;
 
   address public constant ensAddress = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
+  IERC20 public constant torn = IERC20(0x77777FeDdddFfC19Ff86DB637967013e6C6A116C);
 
   address public governance;
-
-  IERC20 public torn;
   ITornadoStakingRewards public Staking;
   TornadoProxyRegistryUpgrade public TornadoProxy;
 
@@ -88,14 +87,9 @@ contract RelayerRegistry is Initializable {
    * @dev this contract will be deployed behind a proxy and should not assign values at logic address,
    *      params left out because self explainable
    * */
-  function initialize(
-    address tornadoGovernance,
-    address stakingAddress,
-    address tornTokenAddress
-  ) external initializer {
+  function initialize(address tornadoGovernance, address stakingAddress) external initializer {
     governance = tornadoGovernance;
     Staking = ITornadoStakingRewards(stakingAddress);
-    torn = IERC20(tornTokenAddress);
     getMasterForWorker[address(0)] = address(this);
   }
 
